@@ -1,0 +1,45 @@
+# ==============================================================================
+# YouTube Downloader .gitignore
+# ==============================================================================
+
+# --- Python 虚拟环境与依赖 ---
+venv/
+.venv/
+env/
+ENV/
+dist/
+build/
+*.egg-info/
+
+# --- Python 编译缓存 ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- 视频与下载文件 (避免将大型视频文件提交至 Git) ---
+/downloads/
+/temp_downloads/
+/sucai/
+*.mp4
+*.webm
+*.mkv
+*.part
+*.ytdl
+
+# --- 账号 Cookies 与敏感凭证 (保护 YouTube 隐私，防止泄露) ---
+# 建议忽略所有的 Netscape 格式的文本 Cookies
+*.txt
+# 如果有特定的 Cookie 文件，可以直接在此忽略
+0d24036b-958b-437b-a104-e9b0338dafc6.txt
+
+# --- 日志与临时调试文件 ---
+*.log
+*.tmp
+*.temp
+
+# --- 常见 IDE 与系统缓存 ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
