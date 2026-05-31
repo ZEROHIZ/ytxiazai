@@ -21,3 +21,14 @@
 
 **修复方案:**
 将 `os.remove(path)` 改为使用检测定位出的正确目标路径 `os.remove(target)`，从而使 `data/` 主目录和 `data/processed/` 归档目录下的 JSON 文件均能被精准、无误地物理清除。
+
+## [2026-05-31] YouTube 下载 n-signature 解密失败 (Requested format is not available)
+**问题描述:**
+在 YouTube 下载过程中，即使安装了 Node.js，依然报错 `Requested format is not available` 并伴随警告 `Remote component challenge solver script (node) was skipped`。
+
+**原因分析:**
+YouTube 会动态更改其反爬虫签名算法。`yt-dlp` 为了安全默认禁用了自动从网络下载最新的外部 JavaScript 解密组件。在内置解密算法失效的情况下，如果没有显式授权 `remote_components` 选项，它会拒绝拉取最新的解密脚本，从而导致签名算法解析（n challenge solving）失败。
+
+**修复方案:**
+在 `youtube_downloader.py` 的 `ydl_opts` 配置中，显式添加 `'remote_components': ['ejs:github']` 授权，允许 `yt-dlp` 自动抓取 GitHub 上最新的解密脚本。
+
