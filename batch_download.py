@@ -1,13 +1,20 @@
 # -*- coding: utf-8 -*-
 """
 batch_download.py
+venv\Scripts\python batch_download.py
 
 核心职责：
 根据指定的 JSON 配置文件，自动提取视频链接、分段片段以及对应的标签（Tags），
 进行批量片段下载。下载后根据“方案 B”将视频自动进行两级目录归类管理：
     - 目标文件夹：sucai/{第一级分类(主体)}/
-    - 目标文件名：{YouTube视频ID}-{完整Tag}-{片段ID}.mp4
+    - 目标文件名：{完整Tag}-{片段ID}-{YouTube视频ID}.mp4
 同时实现断点续传（如果本地目标文件已存在，则自动跳过下载），极大节约带宽与时间。
+集成自动镜头转场对齐引擎，实现高精度亚秒级自动物理微调裁剪与 JSON 起止时间双向自动同步。
+
+特别支持：
+- 允许在 JSON 配置文件中省略 'url' 字段，自动根据 JSON 文件名提取 YouTube 视频 ID 并拼接完整的 'url' 键位，
+  持久化写回 JSON 文件；
+- 完美向后兼容已包含 'url' 的 JSON 文件，以及各种不同结构（如列表或字典）的 clips 声明。
 
 运行方式：
 venv\\Scripts\\python batch_download.py [JSON文件路径] [其他参数]
@@ -98,18 +105,18 @@ def get_category_and_filename(tag: str, video_id: str, clip_id: str) -> Tuple[st
     """
     cleaned_tag = tag.strip() if tag else ""
     if not cleaned_tag:
-        return "未分类", sanitize_filename(f"{video_id}-未分类-{clip_id}.mp4")
+        return "未分类", sanitize_filename(f"未分类-{clip_id}-{video_id}.mp4")
     
     # 拆分 Tag
     segments = [s.strip() for s in cleaned_tag.split('_') if s.strip()]
     if not segments:
-        return "未分类", sanitize_filename(f"{video_id}-未分类-{clip_id}.mp4")
+        return "未分类", sanitize_filename(f"未分类-{clip_id}-{video_id}.mp4")
         
     # 第一段作为主体目录
     subject = segments[0]
     
-    # 方案 B 核心：{video_id}-{完整Tag}-{clip_id}.mp4
-    filename = f"{video_id}-{cleaned_tag}-{clip_id}.mp4"
+    # 方案 B 核心：{完整Tag}-{clip_id}-{video_id}.mp4
+    filename = f"{cleaned_tag}-{clip_id}-{video_id}.mp4"
     return subject, sanitize_filename(filename)
 
 
@@ -251,8 +258,38 @@ def main(argv: List[str]):
         video_url = config.get("url")
         clips = config.get("clips", {})
         
+        # 加上 URL 键位：若 JSON 文件中无 url，则根据文件名自动拼接并回写
+        config_modified = False
         if not video_url:
-            print(f"\n[WARNING] JSON 文件中缺少 'url' 字段，跳过该文件。")
+            base_name = os.path.basename(json_filepath)
+            video_id_from_file, _ = os.path.splitext(base_name)
+            # 自动拼接 YouTube 视频 URL
+            video_url = f"https://www.youtube.com/watch?v={video_id_from_file}"
+            config["url"] = video_url
+            config_modified = True
+            print(f"[*] [AUTO-FILL] JSON 文件中缺少 'url' 字段，已自动根据文件名拼接: {video_url}")
+            
+        # 兼容性处理：若 clips 为列表格式，自动转换为字典格式
+        if isinstance(clips, list):
+            clips_dict = {}
+            for i, clip in enumerate(clips, 1):
+                clips_dict[str(i)] = clip
+            clips = clips_dict
+            config["clips"] = clips
+            config_modified = True
+            print(f"[*] [AUTO-FILL] 检测到 clips 为列表格式，已自动转换为字典格式")
+            
+        # 如果有任何修改，把最新的 JSON 配置写回磁盘，实现双向自动同步
+        if config_modified:
+            try:
+                with open(json_filepath, 'w', encoding='utf-8') as wf:
+                    json.dump(config, wf, indent=4, ensure_ascii=False)
+                print(f"[*] [OK] 已将更新后的配置（包含 'url' 键位）写回原 JSON 文件: {json_filepath}")
+            except Exception as e:
+                print(f"[*] [WARNING] 写入更新配置回 JSON 文件失败: {e}")
+                
+        if not video_url:
+            print(f"\n[WARNING] JSON 文件中缺少 'url' 字段且无法通过文件名获取，跳过该文件。")
             global_fail += 1
             continue
         if not clips:
@@ -298,8 +335,29 @@ def main(argv: List[str]):
                 target_dir = os.path.join(args.output_base, subject)
                 target_filepath = os.path.join(target_dir, target_filename)
                 
-                # 查重：判断目标文件是否已存在
+                # 查重：判断目标文件是否已存在，且必须包含合法的视频流（防止跳过仅存音频的损坏文件）
+                file_exists = False
                 if os.path.exists(target_filepath):
+                    import subprocess
+                    probe_cmd = [
+                        "ffprobe", "-v", "error",
+                        "-select_streams", "v:0",
+                        "-show_entries", "stream=codec_type",
+                        "-of", "default=noprint_wrappers=1:nokey=1",
+                        target_filepath
+                    ]
+                    try:
+                        probe_result = subprocess.run(probe_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=5)
+                        if b"video" in probe_result.stdout:
+                            file_exists = True
+                        else:
+                            # 存在但没有视频流（只有音频），将其删除以便重新下载
+                            print(f"    [*] 检测到本地存在该片段的损坏文件（无视频流，仅存音频），正在自动清理并准备重新下载...")
+                            os.remove(target_filepath)
+                    except Exception:
+                        file_exists = True  # 发生异常默认保留
+                
+                if file_exists:
                     # 在重试轮次中，已经下载的片段直接跳过，且仅在首轮打印提示以防止刷屏
                     if attempt == 1:
                         print(f"    - 片段 [{clip_id}] -> {target_filename} [已存在，跳过]")
@@ -321,14 +379,49 @@ def main(argv: List[str]):
                         output_dir=args.temp_dir
                     )
                     
+                    # 验证下载后的临时文件是否包含合法的视频流（防止因网络风控或 HTTP 429/5XX 导致只下了音频）
+                    has_video = False
                     if os.path.exists(downloaded_temp_path):
+                        import subprocess
+                        probe_cmd = [
+                            "ffprobe", "-v", "error",
+                            "-select_streams", "v:0",
+                            "-show_entries", "stream=codec_type",
+                            "-of", "default=noprint_wrappers=1:nokey=1",
+                            downloaded_temp_path
+                        ]
+                        try:
+                            probe_result = subprocess.run(probe_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=5)
+                            if b"video" in probe_result.stdout:
+                                has_video = True
+                        except Exception:
+                            pass
+                            
+                    if os.path.exists(downloaded_temp_path) and has_video:
                         # 创建目标主体目录并移动文件到目标路径
                         os.makedirs(target_dir, exist_ok=True)
                         shutil.move(downloaded_temp_path, target_filepath)
                         print(f"    [SUCCESS] 片段 [{clip_id}] 归类完成 -> {target_filepath}")
+                        
+                        # 自动转场镜头对齐与物理裁剪微调
+                        try:
+                            import auto_aligner
+                            aligned = auto_aligner.auto_align_clip(target_filepath, json_filepath, clip_id)
+                            if aligned:
+                                print(f"    [AUTO-ALIGN] 自动检测到镜头转场，已成功微调对齐切片 [{clip_id}]！")
+                        except Exception as align_err:
+                            print(f"    [WARNING] 自动镜头对齐失败: {align_err}")
+                            
                         success_count += 1
                     else:
-                        print(f"    [ERROR] 下载成功但临时下载文件未找到")
+                        if os.path.exists(downloaded_temp_path):
+                            try:
+                                os.remove(downloaded_temp_path)
+                            except Exception:
+                                pass
+                            print(f"    [ERROR] 下载文件检测失败：文件下载成功但只包含音频流（无视频流），这通常由于 YouTube 风控限制（如 HTTP 429/5XX）导致视频请求失败。该临时文件已被清理并设为失败。")
+                        else:
+                            print(f"    [ERROR] 下载成功但临时下载文件未找到")
                         fail_count += 1
                 except Exception as ex:
                     print(f"    [ERROR] 片段 [{clip_id}] 下载或切割时失败: {ex}")

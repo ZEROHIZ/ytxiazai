@@ -37,7 +37,7 @@ __pycache__/
 *.log
 *.tmp
 *.temp
-
+prompt.md
 # --- 常见 IDE 与系统缓存 ---
 .vscode/
 .idea/
