@@ -22,26 +22,24 @@
 **修复方案:**
 将 `os.remove(path)` 改为使用检测定位出的正确目标路径 `os.remove(target)`，从而使 `data/` 主目录和 `data/processed/` 归档目录下的 JSON 文件均能被精准、无误地物理清除。
 
-## [2026-05-31] 远端 Docker 环境下下载 YouTube 视频报错 (缺少 JS 运行时导致 n challenge 失败)
+## [2026-05-31] 远端 Docker 环境下下载 YouTube 视频报错 (EJS 强制在线拉取导致 n challenge 失败)
 **问题描述:**
 在远端 Docker 环境中下载 YouTube 视频时失败，报错：`ERROR: [youtube] A7NUHDuaGXk: Requested format is not available. Use --list-formats for a list of available formats`。
 同时伴随警告：`WARNING: [youtube] A7NUHDuaGXk: n challenge solving failed: Some formats may be missing. Ensure you have a supported JavaScript runtime and challenge solver script distribution installed.`
 
 **原因分析:**
-1. 现代 YouTube 采用混淆的 JavaScript 计算 `n` 签名参数来限制带宽和隐藏格式。
-2. `yt-dlp` (>=2025.0.0) 采用全新的 EJS (External JavaScript) 挑战求解器，其运行必须依赖外部 JavaScript 运行时（如 `Deno`、`Node.js` 或 `QuickJS`）以及 `yt-dlp-ejs` 库。
-3. **关键原因**：作为 2026 年中最新的策略，`yt-dlp` 已经**彻底停止对 Node.js v20 和 v21 的支持，目前要求最低的 Node.js 版本为 v22+**。虽然远端容器中已经安装了 Node.js，但其版本为 `v20.20.2`（来自旧版基础镜像 `python3.10-nodejs20-slim`），被 `yt-dlp` 视为不支持的 JavaScript 运行时，从而拒绝运行，导致 `n challenge` 求解失败。
-4. 本地项目的 `Dockerfile` 之前使用了包含 `nodejs20` 的基础镜像，现已被更新为 `FROM nikolaik/python-nodejs:python3.10-nodejs22-slim`。
+1. 现代 YouTube 采用混淆的 JavaScript 计算 `n` 签名参数来限制带宽和隐藏高清晰度视频格式。
+2. `yt-dlp` 需要 JavaScript 运行时（如 `Node.js`）以及 `yt-dlp-ejs` 解密脚本来执行此运算。
+3. **关键症结**：代码中在 `ydl_opts` 内强行指定了 `'remote_components': ['ejs:github']`。这强迫 `yt-dlp` 绕过本地已通过 `pip` 安装好的 `yt-dlp-ejs` 库，转而在每次运行期间动态去 GitHub 拉取解密脚本。
+4. 在 Docker 容器内部，因为没有安装 `git` 命令行工具，且容器处于受限网络（或遭受国内 GFW 对 GitHub 的 DNS 污染与连通阻碍），导致动态拉取 GitHub 资源失败。由于异常被外层静默吸收，导致解密脚本完全缺失，进而使得求解器彻底失效。
+5. 在本地 Windows 环境下，由于系统自带 `git` 且本地网络可顺畅访问 GitHub（或已有缓存），因此表现为能够正常下载。
 
 **修复方案:**
-1. 将本地的 `Dockerfile` 升级为 `python3.10-nodejs22-slim`（已完成）。
-2. 在远端服务器上拉取最新代码，并清理缓存强制重新构建容器：
+1. **代码级别修复**：在 [youtube_downloader.py](file:///d:/daima/youtube%E4%B8%8B%E8%BD%BD/youtube_downloader.py) 中，将 `get_video_info` 与 `download_clip` 两处 `ydl_opts` 内的 `'remote_components': ['ejs:github']` 显式移除（已完成）。这使得 `yt-dlp` 会以极速且 100% 离线的方式直接导入并使用本地通过 `pip` (已安装有 `yt-dlp-ejs`) 获取的解密脚本。
+2. **环境基础增强**：同步将本地的 `Dockerfile` 升级为 `python3.10-nodejs22-slim`（已完成），以确保与未来最新的 `yt-dlp` 规范完美对齐。
+3. 在远端执行代码拉取和强制无缓存重构：
 ```bash
 docker compose down
 docker compose build --no-cache
 docker compose up -d
-```
-3. 重建后，在远端容器中确认 Node.js 版本是否已经更新为 v22+：
-```bash
-docker exec -it youtube-downloader-web node -v
 ```
