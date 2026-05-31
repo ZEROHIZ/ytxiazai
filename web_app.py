@@ -220,13 +220,21 @@ def list_jsons(
                     db_completed = row["cnt"]
             db_conn.close()
 
+            # Determine real-time download status
+            job_status = "completed" if db_completed >= clips_count and clips_count > 0 else "pending"
+            with status_lock:
+                if basename in active_workers:
+                    job_status = "running"
+                elif basename in download_queue:
+                    job_status = "waiting"
+
             result.append({
                 "filename": basename,
                 "url": video_url,
                 "title": data.get("title", basename),
                 "clips_count": clips_count,
                 "completed_count": db_completed,
-                "status": "completed" if db_completed >= clips_count and clips_count > 0 else "pending",
+                "status": job_status,
                 "is_processed": is_processed
             })
         except Exception as e:

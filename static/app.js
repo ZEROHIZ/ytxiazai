@@ -120,8 +120,17 @@ function renderJsonsGrid(jsons) {
             statusPill = `<span class="status-pill status-completed">✓ 已完成 (${item.completed_count}/${item.clips_count})</span>`;
         } else if (item.status === "running") {
             statusPill = `<span class="status-pill status-running">⏳ 下载中...</span>`;
+        } else if (item.status === "waiting") {
+            statusPill = `<span class="status-pill status-pending" style="background:rgba(245,158,11,0.15);color:#f59e0b;">⏳ 排队中...</span>`;
         } else {
             statusPill = `<span class="status-pill status-pending">● 挂起中 (${item.completed_count}/${item.clips_count})</span>`;
+        }
+        
+        let downloadBtn = "";
+        if (item.status === "running" || item.status === "waiting") {
+            downloadBtn = `<button class="btn btn-danger btn-sm" style="margin-left: auto; background:#ef4444; border-color:#ef4444;" onclick="stopJsonDownload(event, '${item.filename}')">🛑 停止</button>`;
+        } else {
+            downloadBtn = `<button class="btn btn-primary btn-sm" style="margin-left: auto;" onclick="triggerDownload('${item.filename}')">⚡ 下载</button>`;
         }
         
         card.innerHTML = `
@@ -140,7 +149,7 @@ function renderJsonsGrid(jsons) {
             <div class="json-card-footer">
                 <button class="btn btn-secondary btn-sm" onclick="editJsonConfig('${item.filename}')">⚙ 编辑</button>
                 <button class="btn btn-danger btn-sm" onclick="deleteJsonConfig('${item.filename}')">🗑 删除</button>
-                <button class="btn btn-primary btn-sm" style="margin-left: auto;" onclick="triggerDownload('${item.filename}')">⚡ 下载</button>
+                ${downloadBtn}
             </div>
         `;
         grid.appendChild(card);
@@ -1117,3 +1126,19 @@ async function restartServer() {
         showNotification("重启服务失败: " + err.message, "error");
     }
 }
+
+async function stopJsonDownload(event, filename) {
+    if (event) event.stopPropagation();
+    if (!confirm(`确定要强行终止/取消该作业 [${filename}] 的下载吗？`)) return;
+    try {
+        const res = await fetch(`${API_BASE}/api/download/kill?filename=${encodeURIComponent(filename)}`, {
+            method: "POST"
+        });
+        if (!res.ok) throw new Error("取消作业失败");
+        showNotification("下载作业已强行中止");
+        loadJsons();
+    } catch (err) {
+        showNotification(err.message, "error");
+    }
+}
+
