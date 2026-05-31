@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  youtube-downloader:
+    build: .
+    container_name: youtube-downloader-web
+    restart: unless-stopped
+    ports:
+      - "7878:7878"
+    volumes:
+      # Persistent JSON configs and SQLite database
+      - ./data:/app/data
+      # Persistent Cookie files for concurrent downloader workers
+      - ./cookies:/app/cookies
+      # Persistent categorized mp4 video clips library
+      - ./sucai:/app/sucai
+      # Persistent temporary downloaded fragments
+      - ./downloads:/app/downloads
+      - ./temp_downloads:/app/temp_downloads
+      # Persistent prompt templates for AI copy
+      - ./prompts:/app/prompts
+    environment:
+      - TZ=Asia/Shanghai
+    # Enable host-level network mapping inside Docker so host proxy can be reached via host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

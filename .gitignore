@@ -22,6 +22,7 @@ __pycache__/
 /temp_downloads/
 /sucai/
 *.mp4
+/data/
 *.webm
 *.mkv
 *.part
@@ -29,15 +30,19 @@ __pycache__/
 
 # --- 账号 Cookies 与敏感凭证 (保护 YouTube 隐私，防止泄露) ---
 # 建议忽略所有的 Netscape 格式的文本 Cookies
-*.txt
+
 # 如果有特定的 Cookie 文件，可以直接在此忽略
 0d24036b-958b-437b-a104-e9b0338dafc6.txt
+/cookies/
 
 # --- 日志与临时调试文件 ---
 *.log
 *.tmp
 *.temp
-prompt.md
+# prompt.md
+# prompt2.md
+/prompts/
+bug.md
 # --- 常见 IDE 与系统缓存 ---
 .vscode/
 .idea/

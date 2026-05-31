@@ -27,6 +27,7 @@ KEY_MAP = {
     "动作": "action",
     "镜头": "camera_movement",
     "氛围": "atmosphere",
+    "色调": "color_tone",
     "描述": "description",
     "适用场景": "use_case",
     "关键词": "keywords"
@@ -70,6 +71,7 @@ def init_db():
         action TEXT,
         camera_movement TEXT,
         atmosphere TEXT,
+        color_tone TEXT,
         description TEXT,
         use_case TEXT,
         keywords TEXT,
@@ -82,6 +84,12 @@ def init_db():
         PRIMARY KEY (video_id, clip_id)
     )
     """)
+    
+    # 动态执行表结构升级升级（若已存在老表，则增加 color_tone 列）
+    try:
+        cursor.execute("ALTER TABLE clips ADD COLUMN color_tone TEXT")
+    except sqlite3.OperationalError:
+        pass  # 已经包含该列
     
     conn.commit()
     conn.close()
@@ -142,11 +150,11 @@ def upsert_clip(clip_data: Dict[str, Any]):
     cursor.execute("""
     INSERT INTO clips (
         video_id, clip_id, group_dir, start_seconds, end_seconds, duration, tag,
-        subject, scene, action, camera_movement, atmosphere, description, use_case, keywords,
+        subject, scene, action, camera_movement, atmosphere, color_tone, description, use_case, keywords,
         resolution, fps, aspect_ratio, local_path, aligned
     ) VALUES (
         ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?
     )
     ON CONFLICT(video_id, clip_id) DO UPDATE SET
@@ -160,6 +168,7 @@ def upsert_clip(clip_data: Dict[str, Any]):
         action = excluded.action,
         camera_movement = excluded.camera_movement,
         atmosphere = excluded.atmosphere,
+        color_tone = excluded.color_tone,
         description = excluded.description,
         use_case = excluded.use_case,
         keywords = excluded.keywords,
@@ -171,7 +180,7 @@ def upsert_clip(clip_data: Dict[str, Any]):
     """, (
         video_id, clip_id, group_dir, start_seconds, end_seconds, duration, tag,
         mapped_attrs.get("subject"), mapped_attrs.get("scene"), mapped_attrs.get("action"),
-        mapped_attrs.get("camera_movement"), mapped_attrs.get("atmosphere"), mapped_attrs.get("description"),
+        mapped_attrs.get("camera_movement"), mapped_attrs.get("atmosphere"), mapped_attrs.get("color_tone"), mapped_attrs.get("description"),
         mapped_attrs.get("use_case"), mapped_attrs.get("keywords"),
         resolution, fps, aspect_ratio, local_path, aligned
     ))
