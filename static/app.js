@@ -310,6 +310,24 @@ function renderJsonFormFromData() {
                     <input type="text" class="attr-camera" value="${escapeHtml(attrs['镜头'] || '')}" oninput="syncJsonFromInputs()">
                 </div>
             </div>
+            <div class="form-row-2col">
+                <div class="form-group">
+                    <label>色调 (如 暖色/冷色)</label>
+                    <input type="text" class="attr-tone" value="${escapeHtml(attrs['色调'] || '')}" oninput="syncJsonFromInputs()">
+                </div>
+                <div class="form-group">
+                    <label>氛围 (如 商务/忧郁)</label>
+                    <input type="text" class="attr-mood" value="${escapeHtml(attrs['氛围'] || '')}" oninput="syncJsonFromInputs()">
+                </div>
+                <div class="form-group">
+                    <label>适用场景 (如 宗教、祈福、传统文化)</label>
+                    <input type="text" class="attr-appscene" value="${escapeHtml(attrs['适用场景'] || '')}" placeholder="场景描述" oninput="syncJsonFromInputs()">
+                </div>
+                <div class="form-group">
+                    <label>关键词 (多个关键词用逗号分隔)</label>
+                    <input type="text" class="attr-keywords" value="${escapeHtml((attrs['关键词'] || []).join(', '))}" placeholder="关键词1, 关键词2, ..." oninput="syncJsonFromInputs()">
+                </div>
+            </div>
             <div class="form-group" style="margin-bottom: 0;">
                 <label>片段细节描述 (用于搜索匹配)</label>
                 <input type="text" class="attr-desc" value="${escapeHtml(attrs['描述'] || '')}" placeholder="描述该视频片段的核心画面..." oninput="syncJsonFromInputs()">
@@ -335,6 +353,8 @@ function addNewClipFormRow() {
             "场景": "",
             "动作": "",
             "镜头": "",
+            "色调": "",
+            "氛围": "",
             "描述": "",
             "关键词": []
         }
@@ -374,6 +394,10 @@ function syncJsonFromInputs() {
         const actionVal = row.querySelector(".attr-action").value;
         const cameraVal = row.querySelector(".attr-camera").value;
         const descVal = row.querySelector(".attr-desc").value;
+        const toneVal = row.querySelector(".attr-tone").value;
+        const moodVal = row.querySelector(".attr-mood").value;
+                const appSceneVal = row.querySelector(".attr-appscene").value;
+        const keywordsVal = row.querySelector(".attr-keywords").value;
         
         newClips[clipId] = {
             "time": timeVal,
@@ -384,7 +408,10 @@ function syncJsonFromInputs() {
                 "动作": actionVal,
                 "镜头": cameraVal,
                 "描述": descVal,
-                "关键词": tagVal.split("_").map(s => s.trim()).filter(Boolean)
+                "色调": toneVal,
+                "氛围": moodVal,
+                "适用场景": appSceneVal,
+                "关键词": keywordsVal.split(",").map(s => s.trim()).filter(Boolean)
             }
         };
     });
