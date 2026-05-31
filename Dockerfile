@@ -8,10 +8,11 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Set working directory inside the container
 WORKDIR /app
 
-# Install system dependencies (FFmpeg, FFprobe, and curl for logs and health checks)
+# Install system dependencies (FFmpeg, FFprobe, Node.js for yt-dlp JS execution, and curl for logs/health checks)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     curl \
+    nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file first to utilize Docker build cache
