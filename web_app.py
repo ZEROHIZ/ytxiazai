@@ -52,6 +52,41 @@ SETTINGS_PATH = os.path.join(DATA_DIR, "settings.json")
 import db_manager
 db_manager.init_db()
 
+def resolve_local_path(path: str) -> str:
+    """
+    智能跨平台路径解析函数。
+    解决在 Windows 上下载并写入 SQLite 的绝对路径，在 Linux Docker 环境中无法被 os.path.exists() 检测到的问题。
+    """
+    if not path:
+        return ""
+    # 统一化斜杠
+    path = path.replace("\\", "/")
+    
+    # 如果路径在当前环境下直接存在，直接返回
+    if os.path.exists(path):
+        return path
+        
+    # 针对 Docker 容器，若原始绝对路径在 Windows (如 D:/daima/youtube下载/sucai/...)，
+    # 则通过定位关键字，将其重组为相对于当前 BASE_DIR 的 Linux 路径
+    for folder in ["sucai", "downloads", "temp_downloads"]:
+        marker = f"/{folder}/"
+        if marker in path:
+            relative_part = path.split(marker, 1)[1]
+            alt_path = os.path.join(BASE_DIR, folder, relative_part)
+            alt_path = alt_path.replace("\\", "/")
+            if os.path.exists(alt_path):
+                return alt_path
+        elif path.startswith(f"{folder}/") or path.startswith(f"./{folder}/"):
+            # 兼容已经是相对路径的情况
+            sub_path = path.split(f"{folder}/", 1)[1]
+            alt_path = os.path.join(BASE_DIR, folder, sub_path)
+            alt_path = alt_path.replace("\\", "/")
+            if os.path.exists(alt_path):
+                return alt_path
+                
+    return path
+
+
 # ==================== FastAPI 初始化 ====================
 app = FastAPI(title="YouTube 下载器与素材管理系统")
 
@@ -451,14 +486,12 @@ def list_clips(
         for r in rows:
             # 转换成前端能支持的结构
             local_path = r["local_path"]
-            # 跨平台路径归一化兼容处理 (支持将 Windows 反斜杠转换为正斜杠，确保 Docker/Linux 顺利运行)
-            if local_path:
-                local_path = local_path.replace("\\", "/")
-                
+            resolved_path = resolve_local_path(local_path)
+            
             web_path = ""
-            if local_path and os.path.exists(local_path):
+            if resolved_path and os.path.exists(resolved_path):
                 # 取得相对于 sucai/ 的路径
-                rel_path = os.path.relpath(local_path, SUCAI_DIR)
+                rel_path = os.path.relpath(resolved_path, SUCAI_DIR)
                 # 转换成静态暴露的 URL 路径
                 web_path = f"/stream/{rel_path.replace(os.sep, '/')}"
 
@@ -518,11 +551,10 @@ def get_clip_thumbnail(path: str):
     """
     实时调用 FFmpeg 截取视频首帧，并流式输出为 JPEG 格式图片（不保存临时文件到本地，且支持懒加载）。
     """
-    # 跨平台路径归一化兼容处理
-    if path:
-        path = path.replace("\\", "/")
+    # 跨平台路径智能解析
+    resolved_path = resolve_local_path(path)
         
-    if not path or not os.path.exists(path):
+    if not resolved_path or not os.path.exists(resolved_path):
         raise HTTPException(status_code=404, detail="视频文件不存在，无法提取缩略图")
     
     # 构建 ffmpeg 抽取首帧命令
@@ -535,7 +567,7 @@ def get_clip_thumbnail(path: str):
     cmd = [
         "ffmpeg", "-y",
         "-ss", "0.0",
-        "-i", path,
+        "-i", resolved_path,
         "-vframes", "1",
         "-f", "image2",
         "-c:v", "mjpeg",
@@ -873,7 +905,18 @@ def kill_download(filename: str):
             except Exception as e:
                 return {"status": "error", "message": f"杀死子进程失败: {e}"}
                 
-    return {"status": "error", "message": "该任务当前不处于运行或排队状态"}
+@app.post("/api/system/restart")
+def restart_system(background_tasks: BackgroundTasks):
+    """
+    优雅重启后端服务。通过触发退出，使 Docker or systemd 自动重启容器/服务。
+    """
+    def shutdown():
+        time.sleep(1.0)
+        print("[*] 正在执行服务重启请求...")
+        os._exit(0)
+        
+    background_tasks.add_task(shutdown)
+    return {"status": "ok", "message": "已成功发出重启指令，服务将在 1 秒后自动重启... 请稍后刷新页面！"}
 
 # ==================== 静态文件路由与映射 ====================
 # 映射已下载视频素材目录到 /stream

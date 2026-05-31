@@ -196,6 +196,28 @@ async function deleteJsonConfig(filename) {
     }
 }
 
+function copyTextFallback(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.position = "fixed";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+        const successful = document.execCommand('copy');
+        if (!successful) {
+            throw new Error('execCommand copy was unsuccessful');
+        }
+    } catch (err) {
+        throw new Error('浏览器安全策略限制，且 fallback 复制失败');
+    } finally {
+        document.body.removeChild(textArea);
+    }
+}
+
 async function copyPromptToClipboard(filename) {
     try {
         const res = await fetch(`${API_BASE}/api/prompts/${filename}`);
@@ -203,7 +225,11 @@ async function copyPromptToClipboard(filename) {
         const data = await res.json();
         
         // 写入剪贴板
-        await navigator.clipboard.writeText(data.content);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(data.content);
+        } else {
+            copyTextFallback(data.content);
+        }
         showNotification(`📋 提示词 [${filename}] 已成功复制到剪贴板！可以直接粘贴到 AI Studio。`);
     } catch (err) {
         console.error(err);
@@ -1073,4 +1099,21 @@ function escapeHtml(str) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+}
+
+async function restartServer() {
+    if (!confirm("确定要重启后端服务吗？这会关闭当前的后台子进程，并重新加载 Docker 容器。")) return;
+    try {
+        const res = await fetch(`${API_BASE}/api/system/restart`, { method: "POST" });
+        if (!res.ok) throw new Error("向服务器发送重启命令失败");
+        const data = await res.json();
+        showNotification("🔄 " + data.message, "success");
+        // 延迟刷新页面
+        setTimeout(() => {
+            window.location.reload();
+        }, 3000);
+    } catch (err) {
+        console.error(err);
+        showNotification("重启服务失败: " + err.message, "error");
+    }
 }

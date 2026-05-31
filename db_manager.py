@@ -126,6 +126,12 @@ def upsert_clip(clip_data: Dict[str, Any]):
     duration = clip_data.get("duration")
     tag = clip_data.get("tag")
     local_path = clip_data.get("local_path")
+    if local_path:
+        local_path = local_path.replace("\\", "/")
+        if os.path.isabs(local_path):
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            local_path = os.path.relpath(local_path, base_dir)
+            local_path = local_path.replace("\\", "/")
     aligned = 1 if clip_data.get("aligned") else 0
     
     # 物理元数据字段
