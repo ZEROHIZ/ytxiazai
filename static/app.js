@@ -1,5 +1,8 @@
 // ==================== 全局状态与初始化 ====================
 const API_BASE = ""; // 本地/Docker 容器暴露的 API 地址前缀，同域留空
+
+// -------------------- 版本号 --------------------
+const APP_VERSION = "1.0.0"; // 项目版本
 let allJsons = [];
 let jsonPage = 1;
 let jsonLimit = 20;
@@ -34,6 +37,12 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // 3. 拖拽上传 Cookie 逻辑
     setupCookieDragAndDrop();
+    
+    // 4. 显示版本号
+    const versionEl = document.getElementById('app-version');
+    if (versionEl) {
+        versionEl.textContent = `Version: ${APP_VERSION}`;
+    }
 });
 
 // ==================== TAB 切换逻辑 ====================
@@ -126,6 +135,9 @@ function renderJsonsGrid(jsons) {
         
         card.innerHTML = `
             <div class="json-card-header">
+                <p>Docker Container Mode</p>
+                <span class="status-indicator-online">● Server Connected</span>
+                <p class="app-version" style="margin-top:4px; font-size:0.85rem; color:#888;">Version: ${APP_VERSION}</p>
                 <span class="json-card-title">${escapeHtml(item.filename)}</span>
                 ${statusPill}
             </div>
