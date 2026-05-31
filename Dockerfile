@@ -1,5 +1,11 @@
-# Use high-performance official Python base image
+# Stage 1: Get official Node.js binary from Node slim image
+FROM node:20-slim AS node_image
+
+# Stage 2: Main Python image
 FROM python:3.10-slim
+
+# Copy node binary from Node image stage
+COPY --from=node_image /usr/local/bin/node /usr/local/bin/node
 
 # Set timezone and ensure non-interactive apt installations
 ENV TZ=Asia/Shanghai
@@ -8,12 +14,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Set working directory inside the container
 WORKDIR /app
 
-# Install system dependencies (FFmpeg, FFprobe, Node.js for yt-dlp JS execution, and curl for logs/health checks)
+# Install system dependencies (FFmpeg, FFprobe, and curl for logs/health checks)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     curl \
-    nodejs \
-    && ln -sf /usr/bin/nodejs /usr/bin/node \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file first to utilize Docker build cache
