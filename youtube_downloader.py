@@ -86,7 +86,7 @@ def get_video_info(
         'nocheckcertificate': True,
         'retries': 10,
         'socket_timeout': 30,
-        'js_runtimes': ['node'],
+        'js_runtimes': {'node': {}},
     }
     
     if cookies_from_browser:
@@ -161,7 +161,7 @@ def download_clip(
         'retries': 10,
         'fragment_retries': 10,
         'socket_timeout': 30,
-        'js_runtimes': ['node'],
+        'js_runtimes': {'node': {}},
     }
     
     if cookies_from_browser:
