@@ -58,6 +58,34 @@
 .\venv\Scripts\python download_clip.py "https://www.youtube.com/watch?v=TnG89ChN9LQ" -s "01:30:00" -p ""
 ```
 
+### 方式 4：使用 Docker 极速容器化部署 (推荐 🖥️)
+
+您可以通过以下两种极简的一行命令方式快速启动带有顶级图形控制中心的 Web 后端服务器，所有的数据和物理切片素材均将持久化保存在本地。
+
+#### 方案 A：通过 Docker Compose 一键本地构建拉起 (最便捷)
+如果您已经克隆了本项目，直接在项目根目录下执行以下单行命令：
+```bash
+docker compose up -d --build
+```
+启动成功后，即可在浏览器中访问：`http://localhost:7878` 体验完整的智能控制中心。
+
+#### 方案 B：使用预构建的 GitHub 镜像一键拉起 (无需下载源码 - 🚀 一行命令部署)
+GitHub 正在为您自动构建并将最新容器推送到 GitHub 容器托管服务（GHCR）。您可以在没有源码的全新电脑上，直接运行以下一行命令拉起最新的预构建版本：
+
+* **Windows (PowerShell 终端)**:
+```powershell
+docker run -d --name youtube-downloader -p 7878:7878 -v ${PWD}/data:/app/data -v ${PWD}/cookies:/app/cookies -v ${PWD}/sucai:/app/sucai -v ${PWD}/downloads:/app/downloads -v ${PWD}/temp_downloads:/app/temp_downloads -v ${PWD}/prompts:/app/prompts --add-host=host.docker.internal:host-gateway --restart unless-stopped ghcr.io/zerohiz/ytxiazai:latest
+```
+
+* **Linux / macOS / Linux Server (Bash 终端)**:
+```bash
+docker run -d --name youtube-downloader -p 7878:7878 -v $(pwd)/data:/app/data -v $(pwd)/cookies:/app/cookies -v $(pwd)/sucai:/app/sucai -v $(pwd)/downloads:/app/downloads -v $(pwd)/temp_downloads:/app/temp_downloads -v $(pwd)/prompts:/app/prompts --add-host=host.docker.internal:host-gateway --restart unless-stopped ghcr.io/zerohiz/ytxiazai:latest
+```
+
+> **💡 说明**：
+> - 端口占用：容器内服务运行在 **7878** 端口。
+> - 宿主机代理访问：通过配置 `--add-host` 并在 Web 界面代理处填写 `http://host.docker.internal:7890`，Docker 容器即可安全无缝地调用您宿主机本地（如 Clash / v2ray）的科学上网代理。
+
 ---
 
 ## 🛠️ 环境依赖项
