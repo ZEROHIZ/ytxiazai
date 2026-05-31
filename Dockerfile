@@ -1,11 +1,5 @@
-# Stage 1: Get official Node.js binary from Node slim image
-FROM node:20-slim AS node_image
-
-# Stage 2: Main Python image
-FROM python:3.10-slim
-
-# Copy node binary from Node image stage
-COPY --from=node_image /usr/local/bin/node /usr/local/bin/node
+# Use pre-configured image containing both Python 3.10 and Node.js 20
+FROM nikolaik/python-nodejs:python3.10-nodejs20-slim
 
 # Set timezone and ensure non-interactive apt installations
 ENV TZ=Asia/Shanghai
