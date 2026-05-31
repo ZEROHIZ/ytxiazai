@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     curl \
     nodejs \
+    && ln -sf /usr/bin/nodejs /usr/bin/node \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file first to utilize Docker build cache

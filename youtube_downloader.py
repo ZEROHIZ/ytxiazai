@@ -83,7 +83,6 @@ def get_video_info(
         'quiet': True,
         'noprogress': True,
         'no_warnings': True,
-        'js_runtimes': {'node': {}},
         'nocheckcertificate': True,
         'retries': 10,
         'socket_timeout': 30,
@@ -157,7 +156,6 @@ def download_clip(
         'outtmpl': out_template,
         'ignoreerrors': False,
         'merge_output_format': 'mp4',  # 优先合并输出为通用 mp4 容器
-        'js_runtimes': {'node': {}},
         'nocheckcertificate': True,
         'retries': 10,
         'fragment_retries': 10,
