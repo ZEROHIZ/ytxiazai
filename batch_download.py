@@ -35,6 +35,8 @@ from typing import List, Tuple, Optional
 import clip_parser
 import youtube_downloader
 import download_clip
+import db_manager
+import metadata_extractor
 
 # 重定向本地 print 至安全控制台输出，实现无缝防乱码防护
 print = download_clip.safe_print
@@ -142,6 +144,9 @@ def archive_json_file(json_path: str):
 
 
 def main(argv: List[str]):
+    # 0. 初始化本地 SQLite 数据库
+    db_manager.init_db()
+
     print("======================================================")
     print("        YouTube Clips Batch Downloader & Classifier   ")
     print("======================================================")
@@ -187,6 +192,11 @@ def main(argv: List[str]):
         "-t", "--temp-dir", 
         default="temp_downloads",
         help="临时下载存储文件夹路径 (默认: 'temp_downloads')"
+    )
+    parser.add_argument(
+        "-d", "--group-dir",
+        default=None,
+        help="自定义总目录分组 (例如: 风景、带货、历史)，置空时默认忽略"
     )
     
     args = parser.parse_args(argv)
@@ -299,11 +309,51 @@ def main(argv: List[str]):
             
         # 提取视频 ID
         video_id = extract_video_id(video_url)
+        video_title = "unknown"
+        try:
+            # 获取真实的视频标题，以备写入数据库
+            info = youtube_downloader.get_video_info(
+                url=video_url,
+                proxy=proxy_str,
+                cookies_path=cookies_path,
+                cookies_from_browser=cookies_from_browser
+            )
+            video_title = info.get("title", "unknown")
+        except Exception:
+            video_title = f"YouTube Video {video_id}"
+
         print(f"[OK] 解析视频元数据成功:")
         print(f"    - 视频 URL: {video_url}")
         print(f"    - Video ID: {video_id}")
+        print(f"    - 视频标题: {video_title}")
         print(f"    - 片段数量: {len(clips)}")
         
+        # 将视频全局记录插入数据库中
+        db_manager.upsert_video(video_id, video_title, video_url)
+        
+        # 辅助函数：一键提取元数据并写入数据库
+        def save_clip_to_db(cid, cinfo, fpath, s_sec, e_sec, vid, gdir):
+            try:
+                phys_meta = metadata_extractor.extract_metadata(fpath)
+                clip_data = {
+                    "video_id": vid,
+                    "clip_id": cid,
+                    "group_dir": gdir,
+                    "start_seconds": s_sec,
+                    "end_seconds": e_sec,
+                    "duration": phys_meta.get("duration") or (e_sec - s_sec),
+                    "tag": cinfo.get("tag", "").strip(),
+                    "local_path": fpath,
+                    "aligned": cinfo.get("aligned", False),
+                    "attributes": cinfo.get("attributes", {}),
+                    "resolution": phys_meta.get("resolution"),
+                    "fps": phys_meta.get("fps"),
+                    "aspect_ratio": phys_meta.get("aspect_ratio")
+                }
+                db_manager.upsert_clip(clip_data)
+            except Exception as db_err:
+                print(f"    [WARNING] 录入数据库失败: {db_err}")
+
         # 5. 循环处理每个片段 (最多进行 5 轮修补尝试以抵御网络偶发故障)
         max_attempts = 5
         for attempt in range(1, max_attempts + 1):
@@ -332,7 +382,11 @@ def main(argv: List[str]):
                     
                 # 根据方案 B 规则，确定分类目标路径
                 subject, target_filename = get_category_and_filename(tag, video_id, clip_id)
-                target_dir = os.path.join(args.output_base, subject)
+                group_dir_str = args.group_dir.strip() if args.group_dir else None
+                if group_dir_str:
+                    target_dir = os.path.join(args.output_base, group_dir_str, subject)
+                else:
+                    target_dir = os.path.join(args.output_base, subject)
                 target_filepath = os.path.join(target_dir, target_filename)
                 
                 # 查重：判断目标文件是否已存在，且必须包含合法的视频流（防止跳过仅存音频的损坏文件）
@@ -360,7 +414,8 @@ def main(argv: List[str]):
                 if file_exists:
                     # 在重试轮次中，已经下载的片段直接跳过，且仅在首轮打印提示以防止刷屏
                     if attempt == 1:
-                        print(f"    - 片段 [{clip_id}] -> {target_filename} [已存在，跳过]")
+                        print(f"    - 片段 [{clip_id}] -> {target_filename} [已存在，跳过并自动同步/更新数据库]")
+                        save_clip_to_db(clip_id, clip_info, target_filepath, start_sec, end_sec, video_id, group_dir_str)
                     skip_count += 1
                     continue
                     
@@ -412,6 +467,9 @@ def main(argv: List[str]):
                         except Exception as align_err:
                             print(f"    [WARNING] 自动镜头对齐失败: {align_err}")
                             
+                        # 下载对齐完成后，写入数据库
+                        save_clip_to_db(clip_id, clip_info, target_filepath, start_sec, end_sec, video_id, group_dir_str)
+                        
                         success_count += 1
                     else:
                         if os.path.exists(downloaded_temp_path):
@@ -448,7 +506,11 @@ def main(argv: List[str]):
                     continue
                     
                 check_subject, check_target_filename = get_category_and_filename(check_tag, video_id, check_clip_id)
-                check_filepath = os.path.join(args.output_base, check_subject, check_target_filename)
+                group_dir_str = args.group_dir.strip() if args.group_dir else None
+                if group_dir_str:
+                    check_filepath = os.path.join(args.output_base, group_dir_str, check_subject, check_target_filename)
+                else:
+                    check_filepath = os.path.join(args.output_base, check_subject, check_target_filename)
                 
                 if not os.path.exists(check_filepath):
                     all_clips_exist = False
