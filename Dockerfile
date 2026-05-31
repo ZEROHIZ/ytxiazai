@@ -11,7 +11,6 @@ WORKDIR /app
 # Install system dependencies (FFmpeg, FFprobe, and curl for logs and health checks)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
-    ffprobe \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
