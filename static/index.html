@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube 智能剪切素材库与下载平台</title>
     <!-- 引入 Google Outfit 和 JetBrains Mono 字体 -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="index.css?v=1.3">
 </head>
+
 <body>
     <!-- 背景光效模糊 -->
     <div class="glass-bg-blur-1"></div>
@@ -19,19 +23,22 @@
             <div class="brand">
                 <div class="brand-logo">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M21.543 6.498C22 8.249 22 12 22 12s0 3.751-.457 5.502c-.254.943-.997 1.687-1.94 1.94C17.852 19.9 12 19.9 12 19.9s-5.852 0-7.603-.458c-.943-.253-1.686-.997-1.94-1.94C2 15.751 2 12 2 12s0-3.751.457-5.502c.254-.943.997-1.687 1.94-1.94C6.148 4.1 12 4.1 12 4.1s5.852 0 7.603.458c.943.253 1.686.997 1.94 1.94z" fill="url(#logo-grad)"/>
-                        <polygon points="10 15 15 12 10 9" fill="#FFFFFF"/>
+                        <path
+                            d="M21.543 6.498C22 8.249 22 12 22 12s0 3.751-.457 5.502c-.254.943-.997 1.687-1.94 1.94C17.852 19.9 12 19.9 12 19.9s-5.852 0-7.603-.458c-.943-.253-1.686-.997-1.94-1.94C2 15.751 2 12 2 12s0-3.751.457-5.502c.254-.943.997-1.687 1.94-1.94C6.148 4.1 12 4.1 12 4.1s5.852 0 7.603.458c.943.253 1.686.997 1.94 1.94z"
+                            fill="url(#logo-grad)" />
+                        <polygon points="10 15 15 12 10 9" fill="#FFFFFF" />
                         <defs>
-                            <linearGradient id="logo-grad" x1="2" y1="4.1" x2="22" y2="19.9" gradientUnits="userSpaceOnUse">
-                                <stop stop-color="#FF416C"/>
-                                <stop offset="1" stop-color="#FF4B2B"/>
+                            <linearGradient id="logo-grad" x1="2" y1="4.1" x2="22" y2="19.9"
+                                gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#FF416C" />
+                                <stop offset="1" stop-color="#FF4B2B" />
                             </linearGradient>
                         </defs>
                     </svg>
                 </div>
                 <h2>YouTube Clips UI</h2>
             </div>
-            
+
             <nav class="sidebar-nav">
                 <button class="nav-item active" id="tab-btn-dashboard" onclick="switchTab('dashboard')">
                     <span class="nav-icon">📊</span>
@@ -55,8 +62,11 @@
             <div class="sidebar-footer">
                 <p>Docker Container Mode</p>
                 <span class="status-indicator-online">● Server Connected</span>
-                <span class="version-number" style="margin-left: 8px; color: var(--text-muted); font-size: 0.85rem;">Version: 1.0.2</span>
-                <button class="btn btn-danger btn-sm" id="btn-restart-server" onclick="restartServer()" style="width: 100%; margin-top: 10px; font-weight: 500; font-size: 0.8rem; padding: 6px 10px; border-radius: var(--radius-sm);">🔄 重启后端服务</button>
+                <span class="version-number"
+                    style="margin-left: 8px; color: var(--text-muted); font-size: 0.85rem;">Version: 1.0.3</span>
+                <button class="btn btn-danger btn-sm" id="btn-restart-server" onclick="restartServer()"
+                    style="width: 100%; margin-top: 10px; font-weight: 500; font-size: 0.8rem; padding: 6px 10px; border-radius: var(--radius-sm);">🔄
+                    重启后端服务</button>
             </div>
         </aside>
 
@@ -82,11 +92,15 @@
                 <div class="json-list-container">
                     <div class="search-filter-bar">
                         <div style="display: flex; gap: 16px; align-items: center; flex-grow: 1; flex-wrap: wrap;">
-                            <input type="text" id="json-search-input" placeholder="搜索配置文件名或 YouTube URL..." oninput="filterJsons()" style="width: 320px; margin-bottom: 0;">
+                            <input type="text" id="json-search-input" placeholder="搜索配置文件名或 YouTube URL..."
+                                oninput="filterJsons()" style="width: 320px; margin-bottom: 0;">
                             <div class="json-filter-tabs">
-                                <button class="filter-tab-btn active" id="json-filter-all" onclick="setJsonFilter('all')">全部</button>
-                                <button class="filter-tab-btn" id="json-filter-pending" onclick="setJsonFilter('pending')">未完成 (Pending)</button>
-                                <button class="filter-tab-btn" id="json-filter-completed" onclick="setJsonFilter('completed')">已归档 (Processed)</button>
+                                <button class="filter-tab-btn active" id="json-filter-all"
+                                    onclick="setJsonFilter('all')">全部</button>
+                                <button class="filter-tab-btn" id="json-filter-pending"
+                                    onclick="setJsonFilter('pending')">未完成 (Pending)</button>
+                                <button class="filter-tab-btn" id="json-filter-completed"
+                                    onclick="setJsonFilter('completed')">已归档 (Processed)</button>
                             </div>
                         </div>
                         <span class="search-count" id="json-count-text">共 0 个配置文件</span>
@@ -97,10 +111,13 @@
                     </div>
 
                     <!-- Dashboard 分页控件 -->
-                    <div class="pagination-container" id="json-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border-glass); flex-wrap: wrap; gap: 16px;">
-                        <div style="display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 0.9rem;">
+                    <div class="pagination-container" id="json-pagination"
+                        style="display: flex; justify-content: space-between; align-items: center; margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border-glass); flex-wrap: wrap; gap: 16px;">
+                        <div
+                            style="display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 0.9rem;">
                             <span>每页显示</span>
-                            <select id="json-limit-select" onchange="changeJsonLimit()" style="width: 80px; padding: 6px 12px; background: rgba(13, 15, 20, 0.6); border-radius: var(--radius-sm); border: 1px solid var(--border-glass); color: #fff; outline: none; cursor: pointer;">
+                            <select id="json-limit-select" onchange="changeJsonLimit()"
+                                style="width: 80px; padding: 6px 12px; background: rgba(13, 15, 20, 0.6); border-radius: var(--radius-sm); border: 1px solid var(--border-glass); color: #fff; outline: none; cursor: pointer;">
                                 <option value="20">20</option>
                                 <option value="50">50</option>
                                 <option value="100">100</option>
@@ -108,47 +125,74 @@
                             <span>个任务</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <button class="btn btn-secondary btn-sm" id="json-prev-btn" onclick="jsonPrevPage()">上页</button>
-                            <span id="json-page-info" style="color: var(--text-main); font-weight: 500; font-size: 0.9rem;">第 1 / 1 页</span>
-                            <button class="btn btn-secondary btn-sm" id="json-next-btn" onclick="jsonNextPage()">下页</button>
+                            <button class="btn btn-secondary btn-sm" id="json-prev-btn"
+                                onclick="jsonPrevPage()">上页</button>
+                            <span id="json-page-info"
+                                style="color: var(--text-main); font-weight: 500; font-size: 0.9rem;">第 1 / 1 页</span>
+                            <button class="btn btn-secondary btn-sm" id="json-next-btn"
+                                onclick="jsonNextPage()">下页</button>
                         </div>
                     </div>
 
                     <!-- 底部：JSON 智能生成说明指南 -->
                     <div class="card glass-card" style="margin-top: 32px; padding: 24px;">
-                        <div style="border-bottom: 1px solid var(--border-glass); padding-bottom: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                        <div
+                            style="border-bottom: 1px solid var(--border-glass); padding-bottom: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
                             <span style="font-size: 1.3rem;">🧠</span>
                             <h3 style="font-size: 1.15rem; font-weight: 600;">如何利用 Gemini 3.1 Pro 智能生成切片任务 JSON 配置</h3>
                         </div>
-                        <div style="font-size: 0.9rem; line-height: 1.6; color: var(--text-muted); display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 32px; flex-wrap: wrap;">
+                        <div
+                            style="font-size: 0.9rem; line-height: 1.6; color: var(--text-muted); display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 32px; flex-wrap: wrap;">
                             <div>
-                                <h4 style="color: #fff; margin-bottom: 10px; font-weight: 600; font-size: 0.95rem;">💡 双轮对话提取流程：</h4>
-                                <ul style="padding-left: 20px; display: flex; flex-direction: column; gap: 12px; list-style-type: disc;">
+                                <h4 style="color: #fff; margin-bottom: 10px; font-weight: 600; font-size: 0.95rem;">💡
+                                    双轮对话提取流程：</h4>
+                                <ul
+                                    style="padding-left: 20px; display: flex; flex-direction: column; gap: 12px; list-style-type: disc;">
                                     <li>
                                         <strong>第一轮对话（时间轴骨架提取）</strong>
-                                        <button class="btn btn-secondary btn-sm" onclick="copyPromptToClipboard('prompt.md')" style="padding: 2px 8px; margin-left: 8px; font-size: 0.75rem; vertical-align: middle;">📋 一键复制 prompt.md</button>
+                                        <button class="btn btn-secondary btn-sm"
+                                            onclick="copyPromptToClipboard('prompt.md')"
+                                            style="padding: 2px 8px; margin-left: 8px; font-size: 0.75rem; vertical-align: middle;">📋
+                                            一键复制 prompt.md</button>
                                         <br>
-                                        <span style="font-size: 0.85rem;">使用本地项目根目录下的 <code>prompt.md</code> 提示词。将它的全部内容复制发送给 Gemini 3.1 Pro，模型会扫描视频并输出第一阶段的切片列表骨架与基础时间轴。</span>
+                                        <span style="font-size: 0.85rem;">使用本地项目根目录下的 <code>prompt.md</code>
+                                            提示词。将它的全部内容复制发送给 Gemini 3.1 Pro，模型会扫描视频并输出第一阶段的切片列表骨架与基础时间轴。</span>
                                     </li>
                                     <li>
                                         <strong>第二轮对话（结构化深度丰富 - ⚠️在同一个对话框内继续）</strong>
-                                        <button class="btn btn-secondary btn-sm" onclick="copyPromptToClipboard('prompt2.md')" style="padding: 2px 8px; margin-left: 8px; font-size: 0.75rem; vertical-align: middle; border-color: rgba(0, 242, 254, 0.4); color: var(--accent-green);">📋 一键复制 prompt2.md</button>
+                                        <button class="btn btn-secondary btn-sm"
+                                            onclick="copyPromptToClipboard('prompt2.md')"
+                                            style="padding: 2px 8px; margin-left: 8px; font-size: 0.75rem; vertical-align: middle; border-color: rgba(0, 242, 254, 0.4); color: var(--accent-green);">📋
+                                            一键复制 prompt2.md</button>
                                         <br>
-                                        <span style="font-size: 0.85rem; color: var(--accent-green);">在同一个 Chat 窗口中，直接复制发送本地根目录下的 <code>prompt2.md</code> 提示词。Gemini 3.1 Pro 会基于第一轮的提取成果，深度补充多维描述、动作、场景、氛围、色调（包括自动打上<b>“暖橙色调”</b>）等属性，并直接吐出最终标准的 JSON 代码！</span>
+                                        <span style="font-size: 0.85rem; color: var(--accent-green);">在同一个 Chat
+                                            窗口中，直接复制发送本地根目录下的 <code>prompt2.md</code> 提示词。Gemini 3.1 Pro
+                                            会基于第一轮的提取成果，深度补充多维描述、动作、场景、氛围、色调（包括自动打上<b>“暖橙色调”</b>）等属性，并直接吐出最终标准的 JSON
+                                            代码！</span>
                                     </li>
                                     <li>
                                         <strong>保存配置</strong><br>
-                                        <span style="font-size: 0.85rem;">将第二轮输出 of JSON 代码复制，在控制中心点击<b>“新建配置文件”</b>直接粘贴保存，或者将文件以 <code>{视频ID}.json</code> 命名直接保存至本项目的 <code>data/</code> 目录下即可！</span>
+                                        <span style="font-size: 0.85rem;">将第二轮输出 of JSON
+                                            代码复制，在控制中心点击<b>“新建配置文件”</b>直接粘贴保存，或者将文件以 <code>{视频ID}.json</code>
+                                            命名直接保存至本项目的 <code>data/</code> 目录下即可！</span>
                                     </li>
                                 </ul>
                             </div>
-                            <div style="background: rgba(0,0,0,0.25); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-glass); display: flex; flex-direction: column; justify-content: center; gap: 12px; min-width: 250px;">
-                                <h4 style="color: #fff; font-weight: 600; font-size: 0.95rem; margin-bottom: 4px;">🎯 推荐使用平台 (Google AI Studio)</h4>
-                                <p style="font-size: 0.85rem; margin-bottom: 8px; line-height: 1.5;">强烈推荐在 <strong>Google AI Studio</strong> 中运行此工作流，这里的对话框体验、响应速度和 Token 上下文大小比普通 Gemini 官网强非常多，且完全无多余的审查阻碍：</p>
-                                <a href="https://aistudio.google.com/app/prompts/new_chat" target="_blank" class="btn btn-primary btn-sm" style="text-align: center; justify-content: center; text-decoration: none; font-weight: 600;">
+                            <div
+                                style="background: rgba(0,0,0,0.25); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-glass); display: flex; flex-direction: column; justify-content: center; gap: 12px; min-width: 250px;">
+                                <h4 style="color: #fff; font-weight: 600; font-size: 0.95rem; margin-bottom: 4px;">🎯
+                                    推荐使用平台 (Google AI Studio)</h4>
+                                <p style="font-size: 0.85rem; margin-bottom: 8px; line-height: 1.5;">强烈推荐在
+                                    <strong>Google AI Studio</strong> 中运行此工作流，这里的对话框体验、响应速度和 Token 上下文大小比普通 Gemini
+                                    官网强非常多，且完全无多余的审查阻碍：</p>
+                                <a href="https://aistudio.google.com/app/prompts/new_chat" target="_blank"
+                                    class="btn btn-primary btn-sm"
+                                    style="text-align: center; justify-content: center; text-decoration: none; font-weight: 600;">
                                     🚀 立即前往 AI Studio 新版 Chat
                                 </a>
-                                <small style="text-align: center; color: var(--text-dim); font-size: 0.75rem;">支持直接调用官方最新的 <strong>Gemini 1.5 Pro / Gemini 2.0 / Gemini 3.1 Pro</strong> 等顶级长文本模型。</small>
+                                <small
+                                    style="text-align: center; color: var(--text-dim); font-size: 0.75rem;">支持直接调用官方最新的
+                                    <strong>Gemini 1.5 Pro / Gemini 2.0 / Gemini 3.1 Pro</strong> 等顶级长文本模型。</small>
                             </div>
                         </div>
                     </div>
@@ -172,7 +216,9 @@
                 <div class="library-search-bar">
                     <div class="search-box-wrapper">
                         <span class="search-icon">🔍</span>
-                        <input type="text" id="clip-search-input" placeholder="输入镜头、动作、色调、标签或描述...（多关键词用中/英文逗号 , 或 ， 分隔）" onkeydown="if(event.key==='Enter') { clipsPage = 1; loadClips(); }">
+                        <input type="text" id="clip-search-input"
+                            placeholder="输入镜头、动作、色调、标签或描述...（多关键词用中/英文逗号 , 或 ， 分隔）"
+                            onkeydown="if(event.key==='Enter') { clipsPage = 1; loadClips(); }">
                     </div>
                     <div class="filter-dropdowns">
                         <select id="clip-filter-tag" onchange="clipsPage = 1; loadClips()">
@@ -187,10 +233,13 @@
                 </div>
 
                 <!-- Library 素材库分页控件 -->
-                <div class="pagination-container" id="clips-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border-glass); flex-wrap: wrap; gap: 16px;">
-                    <div style="display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 0.9rem;">
+                <div class="pagination-container" id="clips-pagination"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border-glass); flex-wrap: wrap; gap: 16px;">
+                    <div
+                        style="display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 0.9rem;">
                         <span>每页显示</span>
-                        <select id="clips-limit-select" onchange="changeClipsLimit()" style="width: 80px; padding: 6px 12px; background: rgba(13, 15, 20, 0.6); border-radius: var(--radius-sm); border: 1px solid var(--border-glass); color: #fff; outline: none; cursor: pointer;">
+                        <select id="clips-limit-select" onchange="changeClipsLimit()"
+                            style="width: 80px; padding: 6px 12px; background: rgba(13, 15, 20, 0.6); border-radius: var(--radius-sm); border: 1px solid var(--border-glass); color: #fff; outline: none; cursor: pointer;">
                             <option value="20">20</option>
                             <option value="50">50</option>
                             <option value="100">100</option>
@@ -198,9 +247,12 @@
                         <span>个片段</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <button class="btn btn-secondary btn-sm" id="clips-prev-btn" onclick="clipsPrevPage()">上页</button>
-                        <span id="clips-page-info" style="color: var(--text-main); font-weight: 500; font-size: 0.9rem;">第 1 / 1 页</span>
-                        <button class="btn btn-secondary btn-sm" id="clips-next-btn" onclick="clipsNextPage()">下页</button>
+                        <button class="btn btn-secondary btn-sm" id="clips-prev-btn"
+                            onclick="clipsPrevPage()">上页</button>
+                        <span id="clips-page-info"
+                            style="color: var(--text-main); font-weight: 500; font-size: 0.9rem;">第 1 / 1 页</span>
+                        <button class="btn btn-secondary btn-sm" id="clips-next-btn"
+                            onclick="clipsNextPage()">下页</button>
                     </div>
                 </div>
             </section>
@@ -224,8 +276,10 @@
                             <form id="settings-form" onsubmit="saveSettings(event)">
                                 <div class="form-group">
                                     <label for="setting-proxy">代理服务器配置 (Proxy)</label>
-                                    <input type="text" id="setting-proxy" placeholder="如 127.0.0.1:7890 或 http://host.docker.internal:7890">
-                                    <small>容器中访问宿主机代理请推荐使用 <code>http://host.docker.internal:7890</code>，不使用代理请留空。</small>
+                                    <input type="text" id="setting-proxy"
+                                        placeholder="如 127.0.0.1:7890 或 http://host.docker.internal:7890">
+                                    <small>容器中访问宿主机代理请推荐使用
+                                        <code>http://host.docker.internal:7890</code>，不使用代理请留空。</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="setting-resolution">最高下载分辨率</label>
@@ -245,15 +299,17 @@
                         <div class="card-header">
                             <h3>🔑 独立 Cookie 文件列表 (<code>cookies/</code>)</h3>
                             <div class="header-actions">
-                                <button class="btn btn-secondary btn-sm" onclick="openCookieModal()">✚ 手动录入 Cookie</button>
+                                <button class="btn btn-secondary btn-sm" onclick="openCookieModal()">✚ 手动录入
+                                    Cookie</button>
                             </div>
                         </div>
                         <div class="card-body">
                             <div class="cookie-upload-dropzone" id="cookie-dropzone">
                                 <p>📥 拖拽或点击上传 Netscape 格式的 Cookie <code>.txt</code> 文件</p>
-                                <input type="file" id="cookie-file-input" style="display: none;" accept=".txt" onchange="uploadCookieFile()">
+                                <input type="file" id="cookie-file-input" style="display: none;" accept=".txt"
+                                    onchange="uploadCookieFile()">
                             </div>
-                            
+
                             <div class="cookie-list" id="cookie-list-box">
                                 <!-- Cookie 列表加载区 -->
                             </div>
@@ -263,49 +319,71 @@
 
                 <!-- 底部：Cookie 安全获取方法说明指南 -->
                 <div class="card glass-card" style="margin-top: 32px; padding: 24px;">
-                    <div style="border-bottom: 1px solid var(--border-glass); padding-bottom: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                    <div
+                        style="border-bottom: 1px solid var(--border-glass); padding-bottom: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 1.3rem;">ℹ️</span>
                         <h3 style="font-size: 1.15rem; font-weight: 600;">如何正确获取 YouTube 账号 Cookies (Netscape 格式)</h3>
                     </div>
-                    <div style="font-size: 0.9rem; line-height: 1.6; color: var(--text-muted); display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
+                    <div
+                        style="font-size: 0.9rem; line-height: 1.6; color: var(--text-muted); display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
                         <div>
-                            <h4 style="color: #fff; margin-bottom: 10px; font-weight: 600; font-size: 0.95rem;">💡 四步导出教程：</h4>
-                            <ol style="padding-left: 20px; display: flex; flex-direction: column; gap: 12px; list-style-type: decimal;">
+                            <h4 style="color: #fff; margin-bottom: 10px; font-weight: 600; font-size: 0.95rem;">💡
+                                四步导出教程：</h4>
+                            <ol
+                                style="padding-left: 20px; display: flex; flex-direction: column; gap: 12px; list-style-type: decimal;">
                                 <li>
                                     <strong>第 1 步：打开无痕模式（隐身窗口）</strong><br>
-                                    <span style="font-size: 0.85rem;">原因：无痕模式是一个完全干净的沙盒，不会和你日常使用的主账号 Cookie 混淆，且关闭后不会留下任何本地缓存。</span>
+                                    <span style="font-size: 0.85rem;">原因：无痕模式是一个完全干净的沙盒，不会和你日常使用的主账号 Cookie
+                                        混淆，且关闭后不会留下任何本地缓存。</span>
                                 </li>
                                 <li>
                                     <strong>第 2 步：登录 YouTube 小号（⚠️必须是抛弃型账号！）</strong><br>
-                                    <span style="font-size: 0.85rem; color: #f87171;">目前 Google 会对异常下载进行封号处理。一旦被封，该账号下的 Gmail、Google Drive 甚至绑定的 Android 手机都会受影响。<b>绝对不能用主账号！</b>请注册一个哪怕被封禁也毫不心疼的全新小号。</span>
+                                    <span style="font-size: 0.85rem; color: #f87171;">目前 Google 会对异常下载进行封号处理。一旦被封，该账号下的
+                                        Gmail、Google Drive 甚至绑定的 Android
+                                        手机都会受影响。<b>绝对不能用主账号！</b>请注册一个哪怕被封禁也毫不心疼的全新小号。</span>
                                 </li>
                                 <li>
                                     <strong>第 3 步：立即导航到 robots.txt</strong><br>
-                                    <span style="font-size: 0.85rem;">登录成功后，不要在 YouTube 首页逗留，不要点开任何视频。立刻在地址栏输入并回车：<code>https://www.youtube.com/robots.txt</code>。你会看到满屏幕的黑白纯文本。</span>
+                                    <span style="font-size: 0.85rem;">登录成功后，不要在 YouTube
+                                        首页逗留，不要点开任何视频。立刻在地址栏输入并回车：<code>https://www.youtube.com/robots.txt</code>。你会看到满屏幕的黑白纯文本。</span>
                                 </li>
                                 <li>
                                     <strong>第 4 步：使用插件导出 Cookie</strong><br>
-                                    <span style="font-size: 0.85rem;">停留在 <code>robots.txt</code> 这个纯文本页面上。点击浏览器右上角的 <a href="https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc" target="_blank" style="color: var(--primary); text-decoration: underline;">Get cookies.txt LOCALLY</a> 插件图标。点击导出（Export），保存为 txt 文件。上传至本系统即可。</span>
+                                    <span style="font-size: 0.85rem;">停留在 <code>robots.txt</code> 这个纯文本页面上。点击浏览器右上角的 <a
+                                            href="https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc"
+                                            target="_blank"
+                                            style="color: var(--primary); text-decoration: underline;">Get cookies.txt
+                                            LOCALLY</a> 插件图标。点击导出（Export），保存为 txt 文件。上传至本系统即可。</span>
                                 </li>
                             </ol>
                         </div>
                         <div>
-                            <h4 style="color: #fff; margin-bottom: 10px; font-weight: 600; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;"><span style="color: #f87171;">🛑</span> 避坑注意事项：</h4>
-                            <ul style="padding-left: 20px; display: flex; flex-direction: column; gap: 12px; list-style-type: none;">
+                            <h4
+                                style="color: #fff; margin-bottom: 10px; font-weight: 600; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+                                <span style="color: #f87171;">🛑</span> 避坑注意事项：</h4>
+                            <ul
+                                style="padding-left: 20px; display: flex; flex-direction: column; gap: 12px; list-style-type: none;">
                                 <li style="position: relative; padding-left: 14px;">
                                     <span style="position: absolute; left: 0; color: #f87171;">•</span>
                                     <strong>1. 绝对不要再次用任何浏览器登录该小号（包括手机都不行）</strong><br>
-                                    <span style="font-size: 0.85rem;">错误示范：想看看小号的订阅更新了没有，于是打开浏览器又登录了这个小号看视频。<br>后果：一旦用浏览器打开了正常的 YouTube 页面，后台的 JS 脚本就会苏醒并更新 Token。你导出的 cookies 将瞬间作废。<br>正确做法：这个小号从此以后只存在于导出的 txt 文件中，专门供本系统使用，永远不要再用真实浏览器登录它。</span>
+                                    <span
+                                        style="font-size: 0.85rem;">错误示范：想看看小号的订阅更新了没有，于是打开浏览器又登录了这个小号看视频。<br>后果：一旦用浏览器打开了正常的
+                                        YouTube 页面，后台的 JS 脚本就会苏醒并更新 Token。你导出的 cookies 将瞬间作废。<br>正确做法：这个小号从此以后只存在于导出的
+                                        txt 文件中，专门供本系统使用，永远不要再用真实浏览器登录它。</span>
                                 </li>
                                 <li style="position: relative; padding-left: 14px;">
                                     <span style="position: absolute; left: 0; color: #f87171;">•</span>
                                     <strong>2. 绝对不要点击“退出登录”</strong><br>
-                                    <span style="font-size: 0.85rem;">错误示范：导出 Cookie 后，顺手点了一下 YouTube 右上角头像选择“退出登录”，然后再关浏览器。<br>后果：点击退出登录会发送一个注销请求给 Google 服务器并直接销毁这个 Session。即使你导出了 Cookie 文件，服务器不认也是白搭。<br>正确做法：直接暴力关闭无痕浏览器窗口。</span>
+                                    <span style="font-size: 0.85rem;">错误示范：导出 Cookie 后，顺手点了一下 YouTube
+                                        右上角头像选择“退出登录”，然后再关浏览器。<br>后果：点击退出登录会发送一个注销请求给 Google 服务器并直接销毁这个 Session。即使你导出了
+                                        Cookie 文件，服务器不认也是白搭。<br>正确做法：直接暴力关闭无痕浏览器窗口。</span>
                                 </li>
                                 <li style="position: relative; padding-left: 14px;">
                                     <span style="position: absolute; left: 0; color: #f87171;">•</span>
                                     <strong>3. 避免在差异巨大的网络环境（IP）中来回切换</strong><br>
-                                    <span style="font-size: 0.85rem;">后果：Google 的安全系统会检测到极度异常的异地登录（例如跨大洲 IP 瞬间切换）。为了保护账号，Google 会主动将这个 Cookie 设置为失效。<br>正确做法：尽量保持导出 Cookie 时的代理 IP，和在本系统下载时使用的代理 IP 是同一个地区，甚至最好是同一个固定节点。</span>
+                                    <span style="font-size: 0.85rem;">后果：Google 的安全系统会检测到极度异常的异地登录（例如跨大洲 IP
+                                        瞬间切换）。为了保护账号，Google 会主动将这个 Cookie 设置为失效。<br>正确做法：尽量保持导出 Cookie 时的代理
+                                        IP，和在本系统下载时使用的代理 IP 是同一个地区，甚至最好是同一个固定节点。</span>
                                 </li>
                             </ul>
                         </div>
@@ -318,7 +396,8 @@
                 <header class="panel-header">
                     <div>
                         <h1>任务并发下载控制台</h1>
-                        <p class="subtitle">监控系统队列与进程。由于你使用了 <code>N</code> 个 Cookie 文件，系统支持最多并发 <code>N</code> 路视频片段下载</p>
+                        <p class="subtitle">监控系统队列与进程。由于你使用了 <code>N</code> 个 Cookie 文件，系统支持最多并发 <code>N</code> 路视频片段下载
+                        </p>
                     </div>
                 </header>
 
@@ -362,7 +441,8 @@
                         <div class="console-terminal-card glass-card">
                             <div class="card-header">
                                 <h3 id="terminal-job-title">📺 实时控制台输出日志 (未选择作业)</h3>
-                                <button class="btn btn-secondary btn-sm" id="btn-refresh-logs" style="display: none;">🔄 强制刷新</button>
+                                <button class="btn btn-secondary btn-sm" id="btn-refresh-logs" style="display: none;">🔄
+                                    强制刷新</button>
                             </div>
                             <div class="terminal-body" id="terminal-output">
                                 <p class="dim-text">请在左侧点击任一【运行中】或【已结束】的任务，以在这里实时观察 yt-dlp & ffmpeg 物理转场对齐引擎的流式输出日志。</p>
@@ -391,21 +471,24 @@
                         </div>
                         <div class="form-group">
                             <label for="form-json-url">YouTube 视频链接 (Url)</label>
-                            <input type="text" id="form-json-url" placeholder="https://www.youtube.com/watch?v=..." oninput="syncJsonFromInputs()">
+                            <input type="text" id="form-json-url" placeholder="https://www.youtube.com/watch?v=..."
+                                oninput="syncJsonFromInputs()">
                         </div>
                         <div class="form-group">
                             <label for="form-json-title">全局视频标题 (Title)</label>
-                            <input type="text" id="form-json-title" placeholder="如不填，后台下载时会自动拉取元数据补全" oninput="syncJsonFromInputs()">
+                            <input type="text" id="form-json-title" placeholder="如不填，后台下载时会自动拉取元数据补全"
+                                oninput="syncJsonFromInputs()">
                         </div>
                         <div class="form-group">
                             <label for="form-json-group-dir">分类文件夹命名 (group_dir - 下载至 sucai/分类名/)</label>
-                            <input type="text" id="form-json-group-dir" placeholder="如：风景、带货、历史，留空时默认直接下载至 sucai/" oninput="syncJsonFromInputs()">
+                            <input type="text" id="form-json-group-dir" placeholder="如：风景、带货、历史，留空时默认直接下载至 sucai/"
+                                oninput="syncJsonFromInputs()">
                         </div>
                         <div class="clips-form-header">
                             <h4>分段切片列表 (Clips)</h4>
                             <button class="btn btn-secondary btn-sm" onclick="addNewClipFormRow()">✚ 添加片段</button>
                         </div>
-                        
+
                         <div class="clips-form-rows" id="form-json-clips-container">
                             <!-- 动态切片输入区 -->
                         </div>
@@ -415,7 +498,8 @@
                     <div class="json-code-section">
                         <label>原始 JSON 预览与手动修改</label>
                         <textarea id="form-json-raw" oninput="syncInputsFromJsonRaw()"></textarea>
-                        <span class="badge badge-error" id="json-syntax-error" style="display: none;">JSON 语法错误！请检查</span>
+                        <span class="badge badge-error" id="json-syntax-error" style="display: none;">JSON
+                            语法错误！请检查</span>
                     </div>
                 </div>
             </div>
@@ -440,7 +524,8 @@
                 </div>
                 <div class="form-group">
                     <label for="form-cookie-content">粘贴 Netscape 格式的 Cookie 文本内容</label>
-                    <textarea id="form-cookie-content" placeholder="# Netscape HTTP Cookie File...&#10;.youtube.com   TRUE    /   TRUE    1785234500  HSID    ..."></textarea>
+                    <textarea id="form-cookie-content"
+                        placeholder="# Netscape HTTP Cookie File...&#10;.youtube.com   TRUE    /   TRUE    1785234500  HSID    ..."></textarea>
                 </div>
             </div>
             <div class="modal-footer">
@@ -470,4 +555,5 @@
 
     <script src="app.js?v=1.3"></script>
 </body>
+
 </html>

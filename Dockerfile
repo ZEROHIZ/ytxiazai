@@ -1,5 +1,5 @@
-# Use pre-configured image containing both Python 3.10 and Node.js 20
-FROM nikolaik/python-nodejs:python3.10-nodejs20-slim
+# Use pre-configured image containing both Python 3.10 and Node.js 22
+FROM nikolaik/python-nodejs:python3.10-nodejs22-slim
 
 # Set timezone and ensure non-interactive apt installations
 ENV TZ=Asia/Shanghai

@@ -22,17 +22,26 @@
 **修复方案:**
 将 `os.remove(path)` 改为使用检测定位出的正确目标路径 `os.remove(target)`，从而使 `data/` 主目录和 `data/processed/` 归档目录下的 JSON 文件均能被精准、无误地物理清除。
 
-## [2026-05-31] YouTube 下载 n-signature 解密失败 (Requested format is not available)
+## [2026-05-31] 远端 Docker 环境下下载 YouTube 视频报错 (缺少 JS 运行时导致 n challenge 失败)
 **问题描述:**
-在 YouTube 下载过程中，报错 `Requested format is not available`，且伴有 `n challenge solving failed: Some formats may be missing. Ensure you have a supported JavaScript runtime and challenge solver script distribution installed` 或 `Remote component challenge solver script (node) was skipped`。
+在远端 Docker 环境中下载 YouTube 视频时失败，报错：`ERROR: [youtube] A7NUHDuaGXk: Requested format is not available. Use --list-formats for a list of available formats`。
+同时伴随警告：`WARNING: [youtube] A7NUHDuaGXk: n challenge solving failed: Some formats may be missing. Ensure you have a supported JavaScript runtime and challenge solver script distribution installed.`
 
 **原因分析:**
-该问题由三个层面的原因共同导致：
-1. **网络与安全限制**：YouTube 会动态更改反爬虫签名算法。`yt-dlp` 为了安全默认禁用了自动从网络下载外部 JS 解密组件（ejs）。在内置算法失效时，若无显式授权，它会跳过远端解密组件的下载。
-2. **JavaScript 运行环境缺失**：此前试图在 Dockerfile 中通过多阶段构建 `COPY --from=node_image /usr/local/bin/node` 的方式引入 Node.js。但由于 `/usr/local/bin/node` 是动态链接二进制文件，在目标 `python:3.10-slim` 基础镜像中，缺乏其所需的兼容动态库或环境支持，导致 `node` 执行文件在容器中运行时静默报错崩溃（`Exit 127` 等）。从而使 `yt-dlp` 无法检测到任何可用的 JS 引擎，进而直接抛出 `Ensure you have a supported JavaScript runtime` 的错误。
-3. **缺少求解分发脚本（yt-dlp[default] 特性缺失）**：即便解决了 JS 运行环境并配置了 `remote_components`，如果使用 `pip install yt-dlp` 仅安装了基础无依赖版，容器内会缺乏处理 ejs（External JavaScript）和解密分发所必须的支持库（Challenge Solver Script Distribution）。这会导致 `yt-dlp` 依然无法把 Node.js 和远端签名解密逻辑连通。
+1. 现代 YouTube 采用混淆的 JavaScript 计算 `n` 签名参数来限制带宽和隐藏格式。
+2. `yt-dlp` (>=2025.0.0) 采用全新的 EJS (External JavaScript) 挑战求解器，其运行必须依赖外部 JavaScript 运行时（如 `Deno`、`Node.js` 或 `QuickJS`）以及 `yt-dlp-ejs` 库。
+3. **关键原因**：作为 2026 年中最新的策略，`yt-dlp` 已经**彻底停止对 Node.js v20 和 v21 的支持，目前要求最低的 Node.js 版本为 v22+**。虽然远端容器中已经安装了 Node.js，但其版本为 `v20.20.2`（来自旧版基础镜像 `python3.10-nodejs20-slim`），被 `yt-dlp` 视为不支持的 JavaScript 运行时，从而拒绝运行，导致 `n challenge` 求解失败。
+4. 本地项目的 `Dockerfile` 之前使用了包含 `nodejs20` 的基础镜像，现已被更新为 `FROM nikolaik/python-nodejs:python3.10-nodejs22-slim`。
 
 **修复方案:**
-1. **统一双语基础镜像（彻底解决 JS 运行环境）**：将 `Dockerfile` 基础镜像更换为业界标准的 `nikolaik/python-nodejs:python3.10-nodejs20-slim` 官方联合镜像，天然保证 Python 3.10 和 Node.js 20 精简版环境完全可用，彻底消除手动拷贝动态二进制文件造成的库缺失隐患。
-2. **补充带特性的 pip 依赖（引入分发脚本）**：将 `requirements.txt` 中的 `yt-dlp>=2025.0.0` 更换为带默认扩展包的 **`yt-dlp[default]>=2025.0.0`**，让 pip 自动下载并补齐与 EJS/签名求解机制相关的整套分发依赖包。
-3. **授权外部解密脚本**：在 `youtube_downloader.py` 的 `ydl_opts` 配置中，显式添加 `'remote_components': ['ejs:github']` 授权，允许 `yt-dlp` 自动抓取 GitHub 上最新的解密脚本。
+1. 将本地的 `Dockerfile` 升级为 `python3.10-nodejs22-slim`（已完成）。
+2. 在远端服务器上拉取最新代码，并清理缓存强制重新构建容器：
+```bash
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+```
+3. 重建后，在远端容器中确认 Node.js 版本是否已经更新为 v22+：
+```bash
+docker exec -it youtube-downloader-web node -v
+```
