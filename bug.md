@@ -22,24 +22,21 @@
 **修复方案:**
 将 `os.remove(path)` 改为使用检测定位出的正确目标路径 `os.remove(target)`，从而使 `data/` 主目录和 `data/processed/` 归档目录下的 JSON 文件均能被精准、无误地物理清除。
 
-## [2026-05-31] 远端 Docker 环境下下载 YouTube 视频报错 (EJS 强制在线拉取导致 n challenge 失败)
+## [2026-05-31] 远端 Docker 环境下下载 YouTube 视频报错 (EJS 默认引擎白名单策略与 API 参数格式问题)
 **问题描述:**
 在远端 Docker 环境中下载 YouTube 视频时失败，报错：`ERROR: [youtube] A7NUHDuaGXk: Requested format is not available. Use --list-formats for a list of available formats`。
 同时伴随警告：`WARNING: [youtube] A7NUHDuaGXk: n challenge solving failed: Some formats may be missing. Ensure you have a supported JavaScript runtime and challenge solver script distribution installed.`
 
 **原因分析:**
-1. 现代 YouTube 采用混淆的 JavaScript 计算 `n` 签名参数来限制带宽和隐藏高清晰度视频格式。
-2. `yt-dlp` 需要 JavaScript 运行时（如 `Node.js`）以及 `yt-dlp-ejs` 解密脚本来执行此运算。
-3. **关键症结**：代码中在 `ydl_opts` 内强行指定了 `'remote_components': ['ejs:github']`。这强迫 `yt-dlp` 绕过本地已通过 `pip` 安装好的 `yt-dlp-ejs` 库，转而在每次运行期间动态去 GitHub 拉取解密脚本。
-4. 在 Docker 容器内部，因为没有安装 `git` 命令行工具，且容器处于受限网络（或遭受国内 GFW 对 GitHub 的 DNS 污染与连通阻碍），导致动态拉取 GitHub 资源失败。由于异常被外层静默吸收，导致解密脚本完全缺失，进而使得求解器彻底失效。
-5. 在本地 Windows 环境下，由于系统自带 `git` 且本地网络可顺畅访问 GitHub（或已有缓存），因此表现为能够正常下载。
+1. 现代 YouTube 采用混淆的 JavaScript 计算 `n` 签名参数来限制带宽和隐藏高清晰度视频格式，`yt-dlp` 必须依赖外部 JS 运行时（如 Node.js 或 Deno）以及 `yt-dlp-ejs` 库进行求解。
+2. **为什么本地可以但 Docker 不行（深层病因）**：
+   * **白名单安全策略限制**：在默认情况下，`yt-dlp` 的 EJS 求解器**仅自动启用并放行 Deno 引擎**，对 Node.js、Bun、QuickJS 默认全部采取**禁用（unavailable）**策略。
+   * **本地环境**：本地 Windows 电脑上安装了 **Deno**（属于默认允许引擎），因此自动检测通过。
+   * **Docker 环境**：容器内仅存在 **Node.js**，导致即使 Node 完美可运行，也会被 `yt-dlp` 无情屏蔽并报 `node (unavailable)`，最终在无 JS 运行时的情况下报错。
+3. **为什么参数配置报错**：为了强行开启 Node.js 运行时，我们在 Python `ydl_opts` 中配置了 `'js_runtimes': ['node']`，但 `yt-dlp` 官方 API 限制该参数**必须为 Dict 格式**，导致抛出 `Invalid js_runtimes format, expected a dict of {runtime: {config}}` 错误。
 
 **修复方案:**
-1. **代码级别修复**：在 [youtube_downloader.py](file:///d:/daima/youtube%E4%B8%8B%E8%BD%BD/youtube_downloader.py) 中，将 `get_video_info` 与 `download_clip` 两处 `ydl_opts` 内的 `'remote_components': ['ejs:github']` 显式移除（已完成）。这使得 `yt-dlp` 会以极速且 100% 离线的方式直接导入并使用本地通过 `pip` (已安装有 `yt-dlp-ejs`) 获取的解密脚本。
-2. **环境基础增强**：同步将本地的 `Dockerfile` 升级为 `python3.10-nodejs22-slim`（已完成），以确保与未来最新的 `yt-dlp` 规范完美对齐。
-3. 在远端执行代码拉取和强制无缓存重构：
-```bash
-docker compose down
-docker compose build --no-cache
-docker compose up -d
-```
+1. **代码级别修复**：在 [youtube_downloader.py](file:///d:/daima/youtube%E4%B8%8B%E8%BD%BD/youtube_downloader.py) 中：
+   * 移除无用的 `'remote_components'` 在线拉取逻辑，全面使用本地 `pip` 离线打包的 `yt-dlp-ejs` 脚本。
+   * 强制显式启用 Node.js 引擎，并修正为正确的 Dict 传参格式：`'js_runtimes': {'node': {}}`。
+2. **重新部署运行**：在远端重新拉取代码并重启 Docker 容器即可。

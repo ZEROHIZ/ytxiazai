@@ -609,6 +609,58 @@ def get_clip_thumbnail(path: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"首帧抽取异常: {e}")
 
+@app.get("/api/clips/download")
+def download_clip(path: str):
+    """
+    提供物理视频片段下载。使用 FileResponse 并强指定 filename，强制浏览器作为附件进行物理下载。
+    """
+    resolved_path = resolve_local_path(path)
+    if not resolved_path or not os.path.exists(resolved_path):
+        raise HTTPException(status_code=404, detail="视频文件不存在，无法下载")
+    
+    filename = os.path.basename(resolved_path)
+    return FileResponse(
+        resolved_path, 
+        media_type="video/mp4", 
+        filename=filename
+    )
+
+@app.delete("/api/clips/{video_id}/{clip_id}")
+def delete_clip(video_id: str, clip_id: str):
+    """
+    从 SQLite 数据库和磁盘物理路径中双重物理删除指定切片片段。
+    """
+    conn = sqlite3.connect(db_manager.DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    try:
+        # 1. 查询 physical local_path
+        cursor.execute("SELECT local_path FROM clips WHERE video_id = ? AND clip_id = ?", (video_id, clip_id))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="未在数据库中找到该片段记录")
+        
+        local_path = row["local_path"]
+        
+        # 2. 从数据库删除记录
+        cursor.execute("DELETE FROM clips WHERE video_id = ? AND clip_id = ?", (video_id, clip_id))
+        conn.commit()
+        
+        # 3. 物理删除文件
+        if local_path:
+            resolved_path = resolve_local_path(local_path)
+            if resolved_path and os.path.exists(resolved_path):
+                os.remove(resolved_path)
+                
+        return {"status": "ok", "message": "片段已成功从数据库和磁盘物理删除"}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"删除片段失败: {e}")
+    finally:
+        conn.close()
+
 # ==================== 异步下载调度系统 ====================
 # 全局下载状态字典
 # 键为 JSON 文件名，值为：{"status": "waiting"|"running"|"completed"|"failed", "cookie": str, "start_time": float, "pid": int, "logs": str}

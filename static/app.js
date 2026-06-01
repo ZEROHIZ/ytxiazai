@@ -629,10 +629,36 @@ function renderClipsGrid(clips) {
                 <div class="clip-title-original" title="来自：${clip.video_title}">
                     📺 ${escapeHtml(clip.video_title)}
                 </div>
+
+                <div class="clip-card-footer">
+                    <a href="${API_BASE}/api/clips/download?path=${encodeURIComponent(clip.local_path)}" target="_blank" download class="btn btn-secondary btn-sm" style="flex:1; justify-content:center; text-decoration:none;" onclick="event.stopPropagation()">📥 下载</a>
+                    <button class="btn btn-danger btn-sm" style="flex:1; justify-content:center;" onclick="deleteClipCard(event, '${escapeHtml(clip.video_id)}', '${escapeHtml(clip.clip_id)}', '${escapeHtml(clip.tag)}')">🗑 删除</button>
+                </div>
             </div>
         `;
         grid.appendChild(card);
     });
+}
+
+async function deleteClipCard(event, videoId, clipId, tag) {
+    event.stopPropagation();
+    if (!confirm(`确认要物理删除切片片段 [${tag}] 吗？\n此操作将同时从 SQLite 数据库移除该记录，并物理删除磁盘上的视频文件，且不可恢复！`)) {
+        return;
+    }
+    
+    try {
+        const res = await fetch(`${API_BASE}/api/clips/${encodeURIComponent(videoId)}/${encodeURIComponent(clipId)}`, {
+            method: "DELETE"
+        });
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.detail || "删除失败");
+        }
+        showNotification(`🗑 片段 [${tag}] 已成功物理删除！`);
+        loadClips();
+    } catch (err) {
+        showNotification(err.message, "error");
+    }
 }
 
 async function updateTagFilterDropdown() {
