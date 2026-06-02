@@ -11,6 +11,7 @@ web_app.py
 4. 关联 sqlite 本地数据库（data/sucai.db），支持搜索和分类过滤已下载片段。
 5. 异步下载队列调度：并发数等于有效 Cookie 数。每个 worker 独占使用一个 Cookie 并启动 batch_download.py 子进程，实时捕捉其控制台输出并写入日志。
 6. 提供本地流式视频预览（映射静态目录 sucai/ 与 static/）。
+7. 支持多维度过滤（Tag 标签、Group 分组、所属视频、画面色调），以及素材多选打包下载 (ZIP) 与批量物理删除。
 """
 
 import os
@@ -24,6 +25,8 @@ import time
 import glob
 import io
 import re
+import zipfile
+import tempfile
 from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.staticfiles import StaticFiles
@@ -429,6 +432,9 @@ def list_clips(
     q: Optional[str] = None, 
     subject: Optional[str] = None, 
     tag: Optional[str] = None,
+    group_dir: Optional[str] = None,
+    video_id: Optional[str] = None,
+    color_tone: Optional[str] = None,
     page: int = 1,
     limit: int = 20
 ):
@@ -448,6 +454,15 @@ def list_clips(
     if tag:
         where_clause += " AND c.tag LIKE ?"
         params.append(f"%{tag}%")
+    if group_dir:
+        where_clause += " AND c.group_dir = ?"
+        params.append(group_dir)
+    if video_id:
+        where_clause += " AND c.video_id = ?"
+        params.append(video_id)
+    if color_tone:
+        where_clause += " AND c.color_tone = ?"
+        params.append(color_tone)
         
     if q:
         # 支持用英文逗号 (,) 或中文逗号 (，) 拆分多关键词进行 AND 组合检索
@@ -554,6 +569,63 @@ def get_all_tags():
     finally:
         conn.close()
 
+@app.get("/api/group_dirs")
+def get_all_group_dirs():
+    """
+    获取 SQLite 数据库中 clips 表的所有去重非空 group_dir 字段。
+    """
+    conn = sqlite3.connect(db_manager.DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT DISTINCT group_dir FROM clips WHERE group_dir IS NOT NULL AND group_dir != '' ORDER BY group_dir ASC")
+        rows = cursor.fetchall()
+        return [row["group_dir"] for row in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取分组文件夹失败: {e}")
+    finally:
+        conn.close()
+
+@app.get("/api/video_ids")
+def get_all_video_ids():
+    """
+    获取 SQLite 数据库中 clips 表关联的所有去重视频 ID 与对应标题。
+    """
+    conn = sqlite3.connect(db_manager.DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT DISTINCT c.video_id, v.title
+            FROM clips c
+            LEFT JOIN videos v ON c.video_id = v.video_id
+            WHERE c.video_id IS NOT NULL AND c.video_id != ''
+            ORDER BY v.title ASC, c.video_id ASC
+        """)
+        rows = cursor.fetchall()
+        return [{"video_id": row["video_id"], "title": row["title"] or row["video_id"]} for row in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取视频列表失败: {e}")
+    finally:
+        conn.close()
+
+@app.get("/api/color_tones")
+def get_all_color_tones():
+    """
+    获取 SQLite 数据库中 clips 表的所有去重非空 color_tone 字段。
+    """
+    conn = sqlite3.connect(db_manager.DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT DISTINCT color_tone FROM clips WHERE color_tone IS NOT NULL AND color_tone != '' ORDER BY color_tone ASC")
+        rows = cursor.fetchall()
+        return [row["color_tone"] for row in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取色调列表失败: {e}")
+    finally:
+        conn.close()
+
 @app.get("/api/clips/thumbnail")
 def get_clip_thumbnail(path: str):
     """
@@ -625,6 +697,109 @@ def download_clip(path: str):
         filename=filename
     )
 
+class BatchDownloadRequest(BaseModel):
+    paths: List[str]
+
+@app.post("/api/clips/batch_download")
+def batch_download_clips(req: BatchDownloadRequest, background_tasks: BackgroundTasks):
+    """
+    批量打包并压缩视频片段为 ZIP，提供给前端单次触发下载，避免浏览器多窗口拦截并保证性能与内存安全。
+    """
+    if not req.paths:
+        raise HTTPException(status_code=400, detail="未选择任何片段")
+        
+    temp_dir = tempfile.gettempdir()
+    zip_filename = f"clips_batch_{int(time.time())}.zip"
+    zip_filepath = os.path.join(temp_dir, zip_filename)
+    
+    try:
+        with zipfile.ZipFile(zip_filepath, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for path in req.paths:
+                resolved_path = resolve_local_path(path)
+                if resolved_path and os.path.exists(resolved_path):
+                    # 使用文件名作为归档内部的文件名
+                    arcname = os.path.basename(resolved_path)
+                    zipf.write(resolved_path, arcname=arcname)
+                    
+        # 在响应返回后异步删除临时 ZIP 文件
+        def cleanup_temp_zip():
+            try:
+                if os.path.exists(zip_filepath):
+                    os.remove(zip_filepath)
+            except Exception as e:
+                print(f"[Error] 清理临时 ZIP 失败: {e}")
+                
+        background_tasks.add_task(cleanup_temp_zip)
+        
+        return FileResponse(
+            zip_filepath,
+            media_type="application/zip",
+            filename=zip_filename
+        )
+    except Exception as e:
+        if os.path.exists(zip_filepath):
+            os.remove(zip_filepath)
+        raise HTTPException(status_code=500, detail=f"打包 ZIP 失败: {e}")
+
+class BatchDeleteRequest(BaseModel):
+    items: List[Dict[str, str]]
+
+@app.post("/api/clips/batch_delete")
+def batch_delete_clips(req: BatchDeleteRequest):
+    """
+    从 SQLite 数据库和磁盘物理路径中双重物理删除选中的多个片段。
+    """
+    if not req.items:
+        raise HTTPException(status_code=400, detail="未提供要删除的片段列表")
+        
+    conn = sqlite3.connect(db_manager.DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    deleted_count = 0
+    errors = []
+    
+    try:
+        for item in req.items:
+            video_id = item.get("video_id")
+            clip_id = item.get("clip_id")
+            if not video_id or not clip_id:
+                continue
+                
+            try:
+                # 1. 查询 physical local_path
+                cursor.execute("SELECT local_path FROM clips WHERE video_id = ? AND clip_id = ?", (video_id, clip_id))
+                row = cursor.fetchone()
+                if not row:
+                    errors.append(f"片段 {video_id}:{clip_id} 在数据库中未找到")
+                    continue
+                
+                local_path = row["local_path"]
+                
+                # 2. 从数据库删除记录
+                cursor.execute("DELETE FROM clips WHERE video_id = ? AND clip_id = ?", (video_id, clip_id))
+                
+                # 3. 物理删除文件
+                if local_path:
+                    resolved_path = resolve_local_path(local_path)
+                    if resolved_path and os.path.exists(resolved_path):
+                        os.remove(resolved_path)
+                deleted_count += 1
+            except Exception as item_err:
+                errors.append(f"删除片段 {video_id}:{clip_id} 发生异常: {item_err}")
+                
+        conn.commit()
+        return {
+            "status": "ok",
+            "message": f"成功物理删除 {deleted_count} 个片段",
+            "errors": errors if errors else None
+        }
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"批量删除失败: {e}")
+    finally:
+        conn.close()
+
 @app.delete("/api/clips/{video_id}/{clip_id}")
 def delete_clip(video_id: str, clip_id: str):
     """
@@ -653,7 +828,7 @@ def delete_clip(video_id: str, clip_id: str):
             if resolved_path and os.path.exists(resolved_path):
                 os.remove(resolved_path)
                 
-        return {"status": "ok", "message": "片段已成功从数据库和磁盘物理删除"}
+        return {"status": "ok", "message": "片段已成功从数据库 and 磁盘物理删除"}
     except HTTPException as he:
         raise he
     except Exception as e:

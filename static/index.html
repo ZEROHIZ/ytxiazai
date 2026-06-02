@@ -63,7 +63,7 @@
                 <p>Docker Container Mode</p>
                 <span class="status-indicator-online">● Server Connected</span>
                 <span class="version-number"
-                    style="margin-left: 8px; color: var(--text-muted); font-size: 0.85rem;">Version: 1.0.4</span>
+                    style="margin-left: 8px; color: var(--text-muted); font-size: 0.85rem;">Version: 1.0.5</span>
                 <button class="btn btn-danger btn-sm" id="btn-restart-server" onclick="restartServer()"
                     style="width: 100%; margin-top: 10px; font-weight: 500; font-size: 0.8rem; padding: 6px 10px; border-radius: var(--radius-sm);">🔄
                     重启后端服务</button>
@@ -225,7 +225,29 @@
                         <select id="clip-filter-tag" onchange="clipsPage = 1; loadClips()">
                             <option value="">所有 Tag 标签</option>
                         </select>
+                        <select id="clip-filter-group-dir" onchange="clipsPage = 1; loadClips()">
+                            <option value="">所有 Group 分组</option>
+                        </select>
+                        <select id="clip-filter-video-id" onchange="clipsPage = 1; loadClips()">
+                            <option value="">所有所属视频</option>
+                        </select>
+                        <select id="clip-filter-color-tone" onchange="clipsPage = 1; loadClips()">
+                            <option value="">所有色调</option>
+                        </select>
                         <button class="btn btn-primary" onclick="clipsPage = 1; loadClips()">检索</button>
+                    </div>
+                </div>
+
+                <!-- 批量操作面板 -->
+                <div id="batch-action-bar" class="batch-action-bar" style="display: none;">
+                    <div class="batch-info">
+                        <span id="batch-select-count">已选中 0 个片段</span>
+                        <button class="btn btn-secondary btn-sm" onclick="selectAllClips(true)">全选本页</button>
+                        <button class="btn btn-secondary btn-sm" onclick="selectAllClips(false)">取消选择</button>
+                    </div>
+                    <div class="batch-buttons">
+                        <button class="btn btn-primary" onclick="batchDownloadClips()">📥 批量下载 (ZIP)</button>
+                        <button class="btn btn-danger" onclick="batchDeleteClips()">🗑 批量删除</button>
                     </div>
                 </div>
 

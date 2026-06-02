@@ -966,3 +966,111 @@ code {
     border-radius: var(--radius-md);
     padding: 16px;
 }
+
+/* ==================== 批量多选与高感度交互美学 ==================== */
+.clip-video-preview {
+    position: relative;
+}
+
+/* 精致毛玻璃复选框 */
+.clip-select-checkbox {
+    position: absolute !important;
+    top: 12px !important;
+    left: 12px !important;
+    width: 22px !important;
+    height: 22px !important;
+    border-radius: 6px !important;
+    background: rgba(13, 15, 20, 0.6) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border: 2px solid rgba(255, 255, 255, 0.3) !important;
+    cursor: pointer !important;
+    z-index: 10 !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: var(--transition) !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+.clip-select-checkbox:hover {
+    border-color: var(--primary) !important;
+    background: rgba(13, 15, 20, 0.8) !important;
+    transform: scale(1.05);
+}
+
+.clip-select-checkbox:checked {
+    background: linear-gradient(135deg, var(--primary) 0%, #ff4b2b 100%) !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 12px var(--primary-glow) !important;
+}
+
+.clip-select-checkbox:checked::before {
+    content: "✓";
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 900;
+}
+
+/* 选中卡片的霓虹发光与微浮动效果 */
+.clip-card.selected {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 25px rgba(255, 65, 108, 0.25) !important;
+    transform: translateY(-4px);
+    background: rgba(255, 65, 108, 0.03) !important;
+}
+
+/* 批量操作悬浮条 (Batch Action Bar) 美学 */
+.batch-action-bar {
+    position: sticky;
+    top: 0;
+    z-index: 99;
+    background: rgba(22, 28, 38, 0.85);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid var(--border-glass-focus);
+    border-radius: var(--radius-lg);
+    padding: 14px 24px;
+    margin-bottom: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    animation: slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-25px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.batch-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+#batch-select-count {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #fff;
+    background: rgba(255, 65, 108, 0.15);
+    border: 1px solid rgba(255, 65, 108, 0.3);
+    padding: 6px 16px;
+    border-radius: 30px;
+    box-shadow: 0 0 10px rgba(255, 65, 108, 0.1);
+}
+
+.batch-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+/* 兼容多下拉框的宽度自适应排布 */
+.filter-dropdowns select {
+    min-width: 140px;
+    width: auto;
+    max-width: 180px;
+}

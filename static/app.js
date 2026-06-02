@@ -528,6 +528,9 @@ async function saveJsonConfig() {
 async function loadClips() {
     const q = document.getElementById("clip-search-input").value;
     const tag = document.getElementById("clip-filter-tag").value;
+    const groupDir = document.getElementById("clip-filter-group-dir").value;
+    const videoId = document.getElementById("clip-filter-video-id").value;
+    const colorTone = document.getElementById("clip-filter-color-tone").value;
     const grid = document.getElementById("clips-grid");
     
     grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;">🎬 正在扫描 SQLite 数据库加载片段...</div>`;
@@ -535,6 +538,9 @@ async function loadClips() {
     let url = `${API_BASE}/api/clips?page=${clipsPage}&limit=${clipsLimit}`;
     if (q) url += `&q=${encodeURIComponent(q)}`;
     if (tag) url += `&tag=${encodeURIComponent(tag)}`;
+    if (groupDir) url += `&group_dir=${encodeURIComponent(groupDir)}`;
+    if (videoId) url += `&video_id=${encodeURIComponent(videoId)}`;
+    if (colorTone) url += `&color_tone=${encodeURIComponent(colorTone)}`;
     
     try {
         const res = await fetch(url);
@@ -544,6 +550,9 @@ async function loadClips() {
         renderClipsGrid(data.clips);
         renderClipsPagination();
         updateTagFilterDropdown();
+        updateGroupDirFilterDropdown();
+        updateVideoIdFilterDropdown();
+        updateColorToneFilterDropdown();
     } catch (err) {
         showNotification(err.message, "error");
     }
@@ -585,6 +594,9 @@ function renderClipsGrid(clips) {
     const grid = document.getElementById("clips-grid");
     grid.innerHTML = "";
     
+    // 重新渲染后重置批量选择条
+    updateBatchActionBar();
+    
     if (clips.length === 0) {
         grid.innerHTML = `
             <div class="glass-card" style="grid-column: 1/-1; padding: 60px; text-align: center; color: var(--text-muted);">
@@ -606,6 +618,7 @@ function renderClipsGrid(clips) {
         
         card.innerHTML = `
             <div class="clip-video-preview" onclick="playVideoClip(${JSON.stringify(clip).replace(/"/g, '&quot;')})">
+                <input type="checkbox" class="clip-select-checkbox" data-path="${escapeHtml(clip.local_path)}" data-video-id="${escapeHtml(clip.video_id)}" data-clip-id="${escapeHtml(clip.clip_id)}" data-tag="${escapeHtml(clip.tag)}" onclick="event.stopPropagation(); toggleSelectClip(this)">
                 <img src="${API_BASE}/api/clips/thumbnail?path=${encodeURIComponent(clip.local_path)}" loading="lazy" style="width:100%; height:100%; object-fit:cover; display:block;" alt="视频首帧封面">
                 <span class="play-overlay-btn" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);">▶</span>
                 <span class="clip-duration-badge">${durationStr}</span>
@@ -677,6 +690,181 @@ async function updateTagFilterDropdown() {
         dropdown.value = currentVal;
     } catch (e) {
         console.error("加载标签下拉框失败:", e);
+    }
+}
+
+async function updateGroupDirFilterDropdown() {
+    const dropdown = document.getElementById("clip-filter-group-dir");
+    if (!dropdown) return;
+    const currentVal = dropdown.value;
+    try {
+        const res = await fetch(`${API_BASE}/api/group_dirs`);
+        if (!res.ok) return;
+        const groupDirs = await res.json();
+        
+        dropdown.innerHTML = `<option value="">所有 Group 分组</option>`;
+        groupDirs.forEach(gd => {
+            dropdown.innerHTML += `<option value="${escapeHtml(gd)}">${escapeHtml(gd)}</option>`;
+        });
+        
+        dropdown.value = currentVal;
+    } catch (e) {
+        console.error("加载分组下拉框失败:", e);
+    }
+}
+
+async function updateVideoIdFilterDropdown() {
+    const dropdown = document.getElementById("clip-filter-video-id");
+    if (!dropdown) return;
+    const currentVal = dropdown.value;
+    try {
+        const res = await fetch(`${API_BASE}/api/video_ids`);
+        if (!res.ok) return;
+        const videos = await res.json();
+        
+        dropdown.innerHTML = `<option value="">所有所属视频</option>`;
+        videos.forEach(v => {
+            dropdown.innerHTML += `<option value="${escapeHtml(v.video_id)}">${escapeHtml(v.title)}</option>`;
+        });
+        
+        dropdown.value = currentVal;
+    } catch (e) {
+        console.error("加载视频下拉框失败:", e);
+    }
+}
+
+async function updateColorToneFilterDropdown() {
+    const dropdown = document.getElementById("clip-filter-color-tone");
+    if (!dropdown) return;
+    const currentVal = dropdown.value;
+    try {
+        const res = await fetch(`${API_BASE}/api/color_tones`);
+        if (!res.ok) return;
+        const tones = await res.json();
+        
+        dropdown.innerHTML = `<option value="">所有色调</option>`;
+        tones.forEach(t => {
+            dropdown.innerHTML += `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`;
+        });
+        
+        dropdown.value = currentVal;
+    } catch (e) {
+        console.error("加载色调下拉框失败:", e);
+    }
+}
+
+// ==================== 批量多选相关交互与逻辑 ====================
+function updateBatchActionBar() {
+    const bar = document.getElementById("batch-action-bar");
+    if (!bar) return;
+    const selectedCheckboxes = document.querySelectorAll(".clip-select-checkbox:checked");
+    const countSpan = document.getElementById("batch-select-count");
+    
+    if (selectedCheckboxes.length > 0) {
+        bar.style.display = "flex";
+        countSpan.innerText = `已选中 ${selectedCheckboxes.length} 个片段`;
+    } else {
+        bar.style.display = "none";
+    }
+}
+
+function toggleSelectClip(checkbox) {
+    const card = checkbox.closest(".clip-card");
+    if (checkbox.checked) {
+        card.classList.add("selected");
+    } else {
+        card.classList.remove("selected");
+    }
+    updateBatchActionBar();
+}
+
+function selectAllClips(checked) {
+    const checkboxes = document.querySelectorAll(".clip-select-checkbox");
+    checkboxes.forEach(cb => {
+        cb.checked = checked;
+        const card = cb.closest(".clip-card");
+        if (checked) {
+            card.classList.add("selected");
+        } else {
+            card.classList.remove("selected");
+        }
+    });
+    updateBatchActionBar();
+}
+
+async function batchDownloadClips() {
+    const selectedCheckboxes = document.querySelectorAll(".clip-select-checkbox:checked");
+    if (selectedCheckboxes.length === 0) {
+        showNotification("请先选择要下载的素材", "error");
+        return;
+    }
+    
+    const paths = Array.from(selectedCheckboxes).map(cb => cb.dataset.path);
+    
+    showNotification("正在打包 ZIP，请稍候...", "success");
+    
+    try {
+        const res = await fetch(`${API_BASE}/api/clips/batch_download`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ paths })
+        });
+        
+        if (!res.ok) throw new Error("批量下载打包失败");
+        
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `clips_batch_${Date.now()}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        
+        showNotification("批量打包下载已成功开始");
+    } catch (err) {
+        showNotification(err.message, "error");
+    }
+}
+
+async function batchDeleteClips() {
+    const selectedCheckboxes = document.querySelectorAll(".clip-select-checkbox:checked");
+    if (selectedCheckboxes.length === 0) {
+        showNotification("请先选择要删除的素材", "error");
+        return;
+    }
+    
+    if (!confirm(`确认要批量物理删除选中的 ${selectedCheckboxes.length} 个片段吗？\n此操作将从 SQLite 数据库彻底清除记录并从磁盘物理删除视频文件，且不可恢复！`)) {
+        return;
+    }
+    
+    const items = Array.from(selectedCheckboxes).map(cb => ({
+        video_id: cb.dataset.videoId,
+        clip_id: cb.dataset.clipId
+    }));
+    
+    try {
+        const res = await fetch(`${API_BASE}/api/clips/batch_delete`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ items })
+        });
+        
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.detail || "批量删除失败");
+        }
+        
+        const data = await res.json();
+        showNotification(data.message);
+        loadClips();
+    } catch (err) {
+        showNotification(err.message, "error");
     }
 }
 
