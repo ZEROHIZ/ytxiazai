@@ -792,7 +792,7 @@ function selectAllClips(checked) {
     updateBatchActionBar();
 }
 
-async function batchDownloadClips() {
+function batchDownloadClips() {
     const selectedCheckboxes = document.querySelectorAll(".clip-select-checkbox:checked");
     console.log("[DEBUG] selectedCheckboxes count:", selectedCheckboxes.length);
     if (selectedCheckboxes.length === 0) {
@@ -800,44 +800,19 @@ async function batchDownloadClips() {
         return;
     }
     
-    const items = Array.from(selectedCheckboxes).map(cb => ({
-        video_id: cb.dataset.videoId,
-        clip_id: cb.dataset.clipId
-    }));
-    console.log("[DEBUG] post items to backend:", items);
+    const idParts = Array.from(selectedCheckboxes).map(cb => `${cb.dataset.videoId}:${cb.dataset.clipId}`);
+    const param = idParts.join(",");
+    console.log("[DEBUG] native get download ids string:", param);
     
-    showNotification("正在打包 ZIP，请稍候...", "success");
+    showNotification("正在打包并拉起浏览器下载，请稍候...", "success");
     
-    try {
-        const res = await fetch(`${API_BASE}/api/clips/batch_download`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ items })
-        });
-        
-        if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            console.error("[DEBUG] batch_download failed response:", res.status, errData);
-            throw new Error(errData.detail || "批量下载打包失败");
-        }
-        
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `clips_batch_${Date.now()}.zip`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-        
-        showNotification("批量打包下载已成功开始");
-    } catch (err) {
-        console.error("[DEBUG] catch error:", err);
-        showNotification(err.message, "error");
-    }
+    // 构造原生 GET 下载链接，直接由浏览器接管下载流，完美避开 Fetch Blob 内存容量截断与连接提早关闭损坏问题
+    const downloadUrl = `${API_BASE}/api/clips/batch_download?ids=${encodeURIComponent(param)}`;
+    
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    // 强制触发下载
+    a.click();
 }
 
 async function batchDeleteClips() {

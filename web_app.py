@@ -697,19 +697,26 @@ def download_clip(path: str):
         filename=filename
     )
 
-class BatchDownloadRequest(BaseModel):
-    items: List[Dict[str, str]]
-
-@app.post("/api/clips/batch_download")
-def batch_download_clips(req: BatchDownloadRequest):
+@app.get("/api/clips/batch_download")
+def batch_download_clips(ids: str):
     """
     批量打包并压缩视频片段为 ZIP，提供给前端单次触发下载。
-    完美解决非 ASCII 字符传输编码导致的 JSON 解析 400 错误，通过 video_id & clip_id 安全定位物理视频。
-    每次请求时自动清理 10 分钟以前的历史临时 ZIP 文件，并在至少成功打包 1 个文件时才返回。
+    采用 GET 方式请求，完美绕过 Javascript Fetch 在大文件/流式传输下的 Blob 损坏问题，直接走浏览器原生安全下载流。
+    使用 ids 参数格式: "video_id:clip_id,video_id:clip_id"
     """
-    print(f"[*] [BatchDownload] Received request items: {req.items}")
-    if not req.items:
+    print(f"[*] [BatchDownload] Received request ids string: {ids}")
+    if not ids:
         raise HTTPException(status_code=400, detail="未选择任何片段")
+        
+    # 解析 ids 字符
+    items = []
+    for part in ids.split(","):
+        if ":" in part:
+            v_id, c_id = part.split(":", 1)
+            items.append({"video_id": v_id.strip(), "clip_id": c_id.strip()})
+            
+    if not items:
+        raise HTTPException(status_code=400, detail="请求的参数 ID 格式错误")
         
     temp_dir = tempfile.gettempdir()
     now_time = time.time()
@@ -729,14 +736,13 @@ def batch_download_clips(req: BatchDownloadRequest):
     
     paths = []
     try:
-        for item in req.items:
-            v_id = item.get("video_id")
-            c_id = item.get("clip_id")
-            if v_id and c_id:
-                cursor.execute("SELECT local_path FROM clips WHERE video_id = ? AND clip_id = ?", (v_id, c_id))
-                row = cursor.fetchone()
-                if row and row["local_path"]:
-                    paths.append(row["local_path"])
+        for item in items:
+            v_id = item["video_id"]
+            c_id = item["clip_id"]
+            cursor.execute("SELECT local_path FROM clips WHERE video_id = ? AND clip_id = ?", (v_id, c_id))
+            row = cursor.fetchone()
+            if row and row["local_path"]:
+                paths.append(row["local_path"])
     except Exception as db_err:
         conn.close()
         raise HTTPException(status_code=500, detail=f"查询数据库失败: {db_err}")
