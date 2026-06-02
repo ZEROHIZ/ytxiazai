@@ -794,12 +794,14 @@ function selectAllClips(checked) {
 
 async function batchDownloadClips() {
     const selectedCheckboxes = document.querySelectorAll(".clip-select-checkbox:checked");
+    console.log("[DEBUG] selectedCheckboxes count:", selectedCheckboxes.length);
     if (selectedCheckboxes.length === 0) {
         showNotification("请先选择要下载的素材", "error");
         return;
     }
     
     const paths = Array.from(selectedCheckboxes).map(cb => cb.dataset.path);
+    console.log("[DEBUG] post paths to backend:", paths);
     
     showNotification("正在打包 ZIP，请稍候...", "success");
     
@@ -812,7 +814,11 @@ async function batchDownloadClips() {
             body: JSON.stringify({ paths })
         });
         
-        if (!res.ok) throw new Error("批量下载打包失败");
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            console.error("[DEBUG] batch_download failed response:", res.status, errData);
+            throw new Error(errData.detail || "批量下载打包失败");
+        }
         
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
@@ -826,6 +832,7 @@ async function batchDownloadClips() {
         
         showNotification("批量打包下载已成功开始");
     } catch (err) {
+        console.error("[DEBUG] catch error:", err);
         showNotification(err.message, "error");
     }
 }

@@ -707,6 +707,7 @@ def batch_download_clips(req: BatchDownloadRequest):
     为完美兼容 Windows 严格的文件锁定机制，避免 BackgroundTasks 冲突引发数据流损坏，
     每次请求时自动清理 10 分钟以前的历史临时 ZIP 文件，并在至少成功打包 1 个文件时才返回。
     """
+    print(f"[*] [BatchDownload] Received request paths: {req.paths}")
     if not req.paths:
         raise HTTPException(status_code=400, detail="未选择任何片段")
         
