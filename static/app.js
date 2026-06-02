@@ -800,8 +800,11 @@ async function batchDownloadClips() {
         return;
     }
     
-    const paths = Array.from(selectedCheckboxes).map(cb => cb.dataset.path);
-    console.log("[DEBUG] post paths to backend:", paths);
+    const items = Array.from(selectedCheckboxes).map(cb => ({
+        video_id: cb.dataset.videoId,
+        clip_id: cb.dataset.clipId
+    }));
+    console.log("[DEBUG] post items to backend:", items);
     
     showNotification("正在打包 ZIP，请稍候...", "success");
     
@@ -811,7 +814,7 @@ async function batchDownloadClips() {
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ paths })
+            body: JSON.stringify({ items })
         });
         
         if (!res.ok) {

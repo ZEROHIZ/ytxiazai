@@ -698,17 +698,17 @@ def download_clip(path: str):
     )
 
 class BatchDownloadRequest(BaseModel):
-    paths: List[str]
+    items: List[Dict[str, str]]
 
 @app.post("/api/clips/batch_download")
 def batch_download_clips(req: BatchDownloadRequest):
     """
     批量打包并压缩视频片段为 ZIP，提供给前端单次触发下载。
-    为完美兼容 Windows 严格的文件锁定机制，避免 BackgroundTasks 冲突引发数据流损坏，
+    完美解决非 ASCII 字符传输编码导致的 JSON 解析 400 错误，通过 video_id & clip_id 安全定位物理视频。
     每次请求时自动清理 10 分钟以前的历史临时 ZIP 文件，并在至少成功打包 1 个文件时才返回。
     """
-    print(f"[*] [BatchDownload] Received request paths: {req.paths}")
-    if not req.paths:
+    print(f"[*] [BatchDownload] Received request items: {req.items}")
+    if not req.items:
         raise HTTPException(status_code=400, detail="未选择任何片段")
         
     temp_dir = tempfile.gettempdir()
@@ -722,14 +722,38 @@ def batch_download_clips(req: BatchDownloadRequest):
         except Exception as clean_err:
             print(f"[Warning] 清理历史临时 ZIP 失败 {f}: {clean_err}")
             
-    # 2. 创建并压缩本次请求的新 ZIP
+    # 2. 查询选中片段的物理路径
+    conn = sqlite3.connect(db_manager.DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    paths = []
+    try:
+        for item in req.items:
+            v_id = item.get("video_id")
+            c_id = item.get("clip_id")
+            if v_id and c_id:
+                cursor.execute("SELECT local_path FROM clips WHERE video_id = ? AND clip_id = ?", (v_id, c_id))
+                row = cursor.fetchone()
+                if row and row["local_path"]:
+                    paths.append(row["local_path"])
+    except Exception as db_err:
+        conn.close()
+        raise HTTPException(status_code=500, detail=f"查询数据库失败: {db_err}")
+    finally:
+        conn.close()
+        
+    if not paths:
+        raise HTTPException(status_code=404, detail="未找到任何对应的物理视频片段记录")
+        
+    # 3. 创建并压缩本次请求的新 ZIP
     zip_filename = f"clips_batch_{int(now_time)}.zip"
     zip_filepath = os.path.join(temp_dir, zip_filename)
     
     written_count = 0
     try:
         with zipfile.ZipFile(zip_filepath, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for path in req.paths:
+            for path in paths:
                 resolved_path = resolve_local_path(path)
                 if resolved_path and os.path.exists(resolved_path):
                     # 使用文件名作为归档内部的文件名
