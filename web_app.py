@@ -701,17 +701,31 @@ class BatchDownloadRequest(BaseModel):
     paths: List[str]
 
 @app.post("/api/clips/batch_download")
-def batch_download_clips(req: BatchDownloadRequest, background_tasks: BackgroundTasks):
+def batch_download_clips(req: BatchDownloadRequest):
     """
-    批量打包并压缩视频片段为 ZIP，提供给前端单次触发下载，避免浏览器多窗口拦截并保证性能与内存安全。
+    批量打包并压缩视频片段为 ZIP，提供给前端单次触发下载。
+    为完美兼容 Windows 严格的文件锁定机制，避免 BackgroundTasks 冲突引发数据流损坏，
+    每次请求时自动清理 10 分钟以前的历史临时 ZIP 文件，并在至少成功打包 1 个文件时才返回。
     """
     if not req.paths:
         raise HTTPException(status_code=400, detail="未选择任何片段")
         
     temp_dir = tempfile.gettempdir()
-    zip_filename = f"clips_batch_{int(time.time())}.zip"
+    now_time = time.time()
+    
+    # 1. 自动清理 10 分钟前的历史打包临时文件
+    for f in glob.glob(os.path.join(temp_dir, "clips_batch_*.zip")):
+        try:
+            if now_time - os.path.getmtime(f) > 600:
+                os.remove(f)
+        except Exception as clean_err:
+            print(f"[Warning] 清理历史临时 ZIP 失败 {f}: {clean_err}")
+            
+    # 2. 创建并压缩本次请求的新 ZIP
+    zip_filename = f"clips_batch_{int(now_time)}.zip"
     zip_filepath = os.path.join(temp_dir, zip_filename)
     
+    written_count = 0
     try:
         with zipfile.ZipFile(zip_filepath, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for path in req.paths:
@@ -720,25 +734,29 @@ def batch_download_clips(req: BatchDownloadRequest, background_tasks: Background
                     # 使用文件名作为归档内部的文件名
                     arcname = os.path.basename(resolved_path)
                     zipf.write(resolved_path, arcname=arcname)
+                    written_count += 1
                     
-        # 在响应返回后异步删除临时 ZIP 文件
-        def cleanup_temp_zip():
-            try:
-                if os.path.exists(zip_filepath):
+        if written_count == 0:
+            if os.path.exists(zip_filepath):
+                try:
                     os.remove(zip_filepath)
-            except Exception as e:
-                print(f"[Error] 清理临时 ZIP 失败: {e}")
-                
-        background_tasks.add_task(cleanup_temp_zip)
-        
+                except Exception:
+                    pass
+            raise HTTPException(status_code=404, detail="选中的视频物理文件均不存在于磁盘，无法打包下载")
+            
         return FileResponse(
             zip_filepath,
             media_type="application/zip",
             filename=zip_filename
         )
+    except HTTPException as he:
+        raise he
     except Exception as e:
         if os.path.exists(zip_filepath):
-            os.remove(zip_filepath)
+            try:
+                os.remove(zip_filepath)
+            except Exception:
+                pass
         raise HTTPException(status_code=500, detail=f"打包 ZIP 失败: {e}")
 
 class BatchDeleteRequest(BaseModel):
